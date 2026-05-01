@@ -79,11 +79,17 @@ export class PredefinedTypesService {
   async getUnitTypes(): Promise<UnitTypeOption[]> {
     try {
       const types = await this.getPredefinedTypes('global', 'unitType');
-      return types.map(type => ({
-        value: type.typeId,
-        label: type.typeLabel,
-        description: type.typeDescription
-      }));
+      const seen = new Map<string, UnitTypeOption>();
+      for (const type of types) {
+        if (!seen.has(type.typeId)) {
+          seen.set(type.typeId, {
+            value: type.typeId,
+            label: type.typeLabel,
+            description: type.typeDescription
+          });
+        }
+      }
+      return Array.from(seen.values());
     } catch (error) {
       console.error('Error fetching unit types:', error);
       // Fallback to hardcoded types if predefined types fail
