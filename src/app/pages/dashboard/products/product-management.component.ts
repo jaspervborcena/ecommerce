@@ -2274,34 +2274,47 @@ import * as XLSX from 'xlsx';
             <button class="close-btn" (click)="closeSelectTagModal()">×</button>
           </div>
           <div class="modal-body">
-            <div class="form-group">
-              <label>Group</label>
-              <select class="form-input" [(ngModel)]="selectedTagGroup" (ngModelChange)="onTagGroupChange($event)">
-                <option value="">Select a group</option>
-                <option *ngFor="let group of tagGroups()" [value]="group">{{ group }}</option>
-              </select>
+            <!-- Empty state: no groups exist yet -->
+            <div *ngIf="tagGroups().length === 0" class="empty-state" style="display: flex; flex-direction: column; align-items: center; padding: 2rem 1rem; gap: 1rem;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="#9ca3af" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L9.568 3z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z"/>
+              </svg>
+              <p style="margin: 0; color: #6b7280; font-size: 0.9rem; text-align: center;">No existing tags found.</p>
+              <button class="btn btn-primary" style="margin-top: 0.5rem;" (click)="openCreateTagFromSelectModal()">+ Create New Tags</button>
             </div>
 
-            <div class="form-group" *ngIf="selectedTagGroup">
-              <label>Tags (Select one per group)</label>
-              <div class="tags-selection-grid">
-                <label *ngFor="let tag of getFilteredTags()" class="tag-radio-label">
-                  <input 
-                    type="radio" 
-                    [name]="'tag-group-' + selectedTagGroup"
-                    [checked]="isTagSelected(tag.tagId)"
-                    (change)="selectSingleTag(tag.tagId)">
-                  <span>{{ tag.label }}</span>
-                </label>
+            <!-- Normal state: groups available -->
+            <ng-container *ngIf="tagGroups().length > 0">
+              <div class="form-group">
+                <label>Group</label>
+                <select class="form-input" [(ngModel)]="selectedTagGroup" (ngModelChange)="onTagGroupChange($event)">
+                  <option value="">Select a group</option>
+                  <option *ngFor="let group of tagGroups()" [value]="group">{{ group }}</option>
+                </select>
               </div>
-              <div *ngIf="getFilteredTags().length === 0" class="empty-state" style="padding: 1rem;">
-                <p style="margin: 0; color: #9ca3af; font-size: 0.875rem;">No tags available in this group</p>
+
+              <div class="form-group" *ngIf="selectedTagGroup">
+                <label>Tags (Select one per group)</label>
+                <div class="tags-selection-grid">
+                  <label *ngFor="let tag of getFilteredTags()" class="tag-radio-label">
+                    <input 
+                      type="radio" 
+                      [name]="'tag-group-' + selectedTagGroup"
+                      [checked]="isTagSelected(tag.tagId)"
+                      (change)="selectSingleTag(tag.tagId)">
+                    <span>{{ tag.label }}</span>
+                  </label>
+                </div>
+                <div *ngIf="getFilteredTags().length === 0" class="empty-state" style="padding: 1rem;">
+                  <p style="margin: 0; color: #9ca3af; font-size: 0.875rem;">No tags available in this group</p>
+                </div>
               </div>
-            </div>
+            </ng-container>
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" (click)="closeSelectTagModal()">Cancel</button>
-            <button class="btn btn-primary" (click)="saveSelectedTags()">Add Tags</button>
+            <button class="btn btn-primary" (click)="saveSelectedTags()" *ngIf="tagGroups().length > 0">Add Tags</button>
           </div>
         </div>
       </div>
@@ -4745,6 +4758,11 @@ export class ProductManagementComponent implements OnInit {
   // ===========================
 
   onCreateTag(): void {
+    this.showCreateTagModal.set(true);
+  }
+
+  openCreateTagFromSelectModal(): void {
+    this.closeSelectTagModal();
     this.showCreateTagModal.set(true);
   }
 
