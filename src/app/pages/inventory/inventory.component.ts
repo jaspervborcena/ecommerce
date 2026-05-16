@@ -110,6 +110,36 @@ export interface AggregatedInventoryRow {
       .control-go { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; }
       .date-range-inputs { display: flex; gap: 8px; align-items: center; }
 
+      .inventory-metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+        max-width: 1400px;
+        margin: 0 auto 1.5rem auto;
+        padding: 0 2rem;
+      }
+      .metric-card {
+        background: white;
+        border-radius: 16px;
+        padding: 16px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      }
+      .metric-label {
+        font-size: 0.8rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 8px;
+        display: block;
+        font-weight: 700;
+      }
+      .metric-value {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #111827;
+      }
+
       .single-store { display: inline-block; }
       .store-name { 
         text-transform: uppercase; 
@@ -569,6 +599,17 @@ export class InventoryComponent implements OnInit {
   showDetails = signal<boolean>(false);
   selectedRow = signal<AggregatedInventoryRow | null>(null);
 
+  get inventoryPerformance() {
+    const rows = this.dataSource.data || [];
+    return {
+      totalSkus: rows.length,
+      totalQuantity: rows.reduce((sum, row) => sum + (row.quantity || 0), 0),
+      totalGross: rows.reduce((sum, row) => sum + (row.totalGross || 0), 0),
+      totalProfit: rows.reduce((sum, row) => sum + (row.totalProfit || 0), 0),
+      totalRemainingStock: rows.reduce((sum, row) => sum + (row.remainingStock || 0), 0)
+    };
+  }
+
   constructor(
     public inventoryService: AppInventoryService,
     private storeService: StoreService,
@@ -668,7 +709,9 @@ export class InventoryComponent implements OnInit {
       this.selectedPeriod, 
       1, 
       this.selectedStoreId(),
-      currentPermission?.companyId
+      currentPermission?.companyId,
+      this.parseDate(this.dateFrom),
+      this.parseDate(this.dateTo)
     );
   }
 
@@ -707,7 +750,9 @@ export class InventoryComponent implements OnInit {
         this.selectedPeriod, 
         1, 
         this.selectedStoreId(),
-        currentPermission?.companyId
+        currentPermission?.companyId,
+        this.parseDate(this.dateFrom),
+        this.parseDate(this.dateTo)
       );
     }
   }
@@ -721,17 +766,19 @@ export class InventoryComponent implements OnInit {
   periodOptions = [
     { key: 'today', label: 'Today' },
     { key: 'yesterday', label: 'Yesterday' },
+    { key: 'this_week', label: 'This Week' },
+    { key: 'previous_week', label: 'Previous Week' },
     { key: 'this_month', label: 'This Month' },
     { key: 'previous_month', label: 'Previous Month' },
     { key: 'date_range', label: 'Date Range' }
   ];
-  selectedPeriod: 'today' | 'yesterday' | 'this_month' | 'previous_month' | 'date_range' = 'today';
+  selectedPeriod: 'today' | 'yesterday' | 'this_week' | 'previous_week' | 'this_month' | 'previous_month' | 'date_range' = 'today';
   dateFrom: string | null = null; // YYYY-MM-DD
   dateTo: string | null = null;
 
   onPeriodChange(event: Event) {
     const t = event.target as HTMLSelectElement;
-    this.selectedPeriod = t.value as 'today' | 'yesterday' | 'this_month' | 'previous_month' | 'date_range';
+    this.selectedPeriod = t.value as 'today' | 'yesterday' | 'this_week' | 'previous_week' | 'this_month' | 'previous_month' | 'date_range';
     if (this.selectedPeriod === 'date_range') {
       // default dateTo = today, dateFrom = today - 30 days
       const now = new Date();
@@ -752,7 +799,9 @@ export class InventoryComponent implements OnInit {
       this.selectedPeriod, 
       1, 
       this.selectedStoreId(),
-      currentPermission?.companyId
+      currentPermission?.companyId,
+      this.parseDate(this.dateFrom),
+      this.parseDate(this.dateTo)
     );
   }
 
@@ -764,8 +813,15 @@ export class InventoryComponent implements OnInit {
       this.selectedPeriod, 
       1, 
       this.selectedStoreId(),
-      currentPermission?.companyId
+      currentPermission?.companyId,
+      this.parseDate(this.dateFrom),
+      this.parseDate(this.dateTo)
     );
+  }
+
+  private parseDate(value: string | null): Date | undefined {
+    if (!value) return undefined;
+    return new Date(`${value}T00:00:00`);
   }
 
   async goToPage(pageOrValue: any) {
@@ -776,7 +832,9 @@ export class InventoryComponent implements OnInit {
       this.selectedPeriod, 
       page, 
       this.selectedStoreId(),
-      currentPermission?.companyId
+      currentPermission?.companyId,
+      this.parseDate(this.dateFrom),
+      this.parseDate(this.dateTo)
     );
     try { window.scrollTo({ top: 120, behavior: 'smooth' }); } catch {}
   }

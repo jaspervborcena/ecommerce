@@ -1606,11 +1606,13 @@ export class OverviewComponent implements OnInit {
   protected periodOptions = [
     { key: 'today', label: 'Today' },
     { key: 'yesterday', label: 'Yesterday' },
+    { key: 'this_week', label: 'This Week' },
+    { key: 'previous_week', label: 'Previous Week' },
     { key: 'this_month', label: 'This Month' },
     { key: 'previous_month', label: 'Previous Month' },
     { key: 'date_range', label: 'Date Range' }
   ];
-  protected selectedPeriod = signal<'today' | 'yesterday' | 'this_month' | 'previous_month' | 'date_range'>('today');
+  protected selectedPeriod = signal<'today' | 'yesterday' | 'this_week' | 'previous_week' | 'this_month' | 'previous_month' | 'date_range'>('today');
   protected dateFrom = signal<string | null>(null); // YYYY-MM-DD
   protected dateTo = signal<string | null>(null);
   protected dateRangeRevenue = signal<number>(0);
@@ -1657,6 +1659,27 @@ export class OverviewComponent implements OnInit {
       yesterday.setDate(now.getDate() - 1);
       start = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0, 0);
       end = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999);
+    } else if (period === 'this_week') {
+      const nowWeekDay = now.getDay();
+      const mondayOffset = (nowWeekDay + 6) % 7;
+      start = new Date(now);
+      start.setDate(now.getDate() - mondayOffset);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+    } else if (period === 'previous_week') {
+      const nowWeekDay = now.getDay();
+      const mondayOffset = (nowWeekDay + 6) % 7;
+      const currentWeekStart = new Date(now);
+      currentWeekStart.setDate(now.getDate() - mondayOffset);
+      currentWeekStart.setHours(0, 0, 0, 0);
+      start = new Date(currentWeekStart);
+      start.setDate(currentWeekStart.getDate() - 7);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
     } else if (period === 'this_month') {
       start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
       end = new Date(now.getFullYear(), now.getMonth(), new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(), 23, 59, 59, 999);
@@ -1766,8 +1789,8 @@ export class OverviewComponent implements OnInit {
         // When viewing previous month, compare to 2 months ago
         revCurrent = this.previousMonthRevenue();
         revPrevious = 0; // Could implement 2-months-ago if needed
-      } else if (period === 'date_range') {
-        // Compare selected date range with previous equivalent period
+      } else if (period === 'date_range' || period === 'this_week' || period === 'previous_week') {
+        // Compare selected date range or weekly periods with the previous equivalent period
         revCurrent = this.dateRangeRevenue();
         revPrevious = this.previousDateRangeRevenue();
       } else {
@@ -1805,8 +1828,8 @@ export class OverviewComponent implements OnInit {
       } else if (period === 'previous_month') {
         ordersCurrent = this.previousMonthOrders();
         ordersPrevious = 0; // Could implement 2-months-ago if needed
-      } else if (period === 'date_range') {
-        // Compare selected date range with previous equivalent period
+      } else if (period === 'date_range' || period === 'this_week' || period === 'previous_week') {
+        // Compare selected date range or weekly periods with the previous equivalent period
         ordersCurrent = this.dateRangeOrders();
         ordersPrevious = this.previousDateRangeOrders();
       } else {
@@ -1846,6 +1869,8 @@ export class OverviewComponent implements OnInit {
     const period = this.selectedPeriod();
     if (period === 'this_month' || period === 'previous_month') {
       return 'From Last Month';
+    } else if (period === 'this_week' || period === 'previous_week') {
+      return 'From Previous Week';
     } else if (period === 'date_range') {
       return 'From Previous Period';
     }
@@ -2216,6 +2241,42 @@ export class OverviewComponent implements OnInit {
       this.ledgerRecoveredQty.set(0);
     }
   }
+
+  protected async fetchWeeklyComparison(startDate: Date, endDate: Date): Promise<void> {
+    try {
+      const companyId = this.authService.getCurrentPermission()?.companyId || '';
+      const storeId = this.selectedStoreId() || this.authService.getCurrentPermission()?.storeId;
+      if (!companyId || !storeId) {
+        this.dateRangeRevenue.set(0);
+        this.dateRangeOrders.set(0);
+        this.previousDateRangeRevenue.set(0);
+        this.previousDateRangeOrders.set(0);
+        return;
+      }
+
+      const previousStart = new Date(startDate);
+      previousStart.setDate(previousStart.getDate() - 7);
+      const previousEnd = new Date(endDate);
+      previousEnd.setDate(previousEnd.getDate() - 7);
+
+      const currentLedger = await this.ledgerService.getOrderBalancesForRange(companyId, storeId, startDate, endDate, 'completed');
+      const previousLedger = await this.ledgerService.getOrderBalancesForRange(companyId, storeId, previousStart, previousEnd, 'completed');
+
+      const currentOrders = await this.orderService.countCompletedOrders(storeId, startDate, endDate);
+      const previousOrders = await this.orderService.countCompletedOrders(storeId, previousStart, previousEnd);
+
+      this.dateRangeRevenue.set(Number(currentLedger?.runningBalanceAmount || 0));
+      this.previousDateRangeRevenue.set(Number(previousLedger?.runningBalanceAmount || 0));
+      this.dateRangeOrders.set(currentOrders);
+      this.previousDateRangeOrders.set(previousOrders);
+    } catch (error) {
+      console.error('Error fetching weekly comparison:', error);
+      this.dateRangeRevenue.set(0);
+      this.dateRangeOrders.set(0);
+      this.previousDateRangeRevenue.set(0);
+      this.previousDateRangeOrders.set(0);
+    }
+  }
   
   protected monthOrders = computed(() => {
     const now = new Date();
@@ -2260,7 +2321,7 @@ export class OverviewComponent implements OnInit {
   protected onOverviewPeriodChange(event: Event) {
     const target = event.target as HTMLSelectElement;
     if (!target) return;
-    const v = target.value as 'today' | 'yesterday' | 'this_month' | 'previous_month' | 'date_range';
+    const v = target.value as 'today' | 'yesterday' | 'this_week' | 'previous_week' | 'this_month' | 'previous_month' | 'date_range';
     
     // Reset all ledger signals to 0 when period changes to prevent stale data
     this.ledgerReturnAmount.set(0);
@@ -2364,6 +2425,27 @@ export class OverviewComponent implements OnInit {
       const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
       start = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0, 0);
       end = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999);
+    } else if (period === 'this_week') {
+      const nowWeekDay = now.getDay();
+      const mondayOffset = (nowWeekDay + 6) % 7; // Monday as first day of the week
+      start = new Date(now);
+      start.setDate(now.getDate() - mondayOffset);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+    } else if (period === 'previous_week') {
+      const nowWeekDay = now.getDay();
+      const mondayOffset = (nowWeekDay + 6) % 7;
+      const currentWeekStart = new Date(now);
+      currentWeekStart.setDate(now.getDate() - mondayOffset);
+      currentWeekStart.setHours(0, 0, 0, 0);
+      start = new Date(currentWeekStart);
+      start.setDate(currentWeekStart.getDate() - 7);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
     } else if (period === 'this_month') {
       start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
       end = new Date(now.getFullYear(), now.getMonth(), new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(), 23, 59, 59, 999);
@@ -2384,9 +2466,12 @@ export class OverviewComponent implements OnInit {
     const storeId = this.selectedStoreId() || this.authService.getCurrentPermission()?.storeId;
     if (storeId && start && end) {
       this.loadAnalyticsData(start, end);
-      // Monthly periods need day-by-day ledger summation for revenue + comparison
+      // Weekly and monthly periods need extra comparison loads
       if (period === 'this_month' || period === 'previous_month') {
         this.fetchMonthlyComparison().catch(err => console.error('fetchMonthlyComparison error:', err));
+      }
+      if (period === 'this_week' || period === 'previous_week') {
+        this.fetchWeeklyComparison(start, end).catch(err => console.error('fetchWeeklyComparison error:', err));
       }
     }
   }
@@ -2399,7 +2484,7 @@ export class OverviewComponent implements OnInit {
   private loadAnalyticsData(startDate: Date, endDate: Date): void {
     // Load analytics data for the given date range
     // Called when date range is applied
-    this.loadCurrentDateData().then(() => {
+    this.loadCurrentDateData(startDate, endDate).then(() => {
       this.fetchLedgerTotalsForPeriod(startDate, endDate);
     }).catch(err => {
       console.error('Error loading analytics data:', err);
@@ -2473,7 +2558,7 @@ export class OverviewComponent implements OnInit {
     }
   }
 
-  async loadCurrentDateData(): Promise<void> {
+  async loadCurrentDateData(startDate?: Date, endDate?: Date): Promise<void> {
     try {
       // Use selected store ID or get from permission - EXACT same logic
       const storeId = this.selectedStoreId() || this.authService.getCurrentPermission()?.storeId;
@@ -2485,63 +2570,18 @@ export class OverviewComponent implements OnInit {
         return;
       }
 
-      // Load TODAY's data
-      const today = new Date();
-      const startDate = new Date(today.toISOString().split('T')[0]); // Start of today
-      const endDate = new Date(today.toISOString().split('T')[0]); // End of today
-      endDate.setHours(23, 59, 59, 999);
+      // Default to today if no explicit range is supplied
+      const now = new Date();
+      const queryStart = startDate ? new Date(startDate) : new Date(now.toISOString().split('T')[0]);
+      const queryEnd = endDate ? new Date(endDate) : new Date(now.toISOString().split('T')[0]);
+      queryEnd.setHours(23, 59, 59, 999);
 
-      // Load today's orders from Firestore
-      const todayOrders = await this.orderService.getOrdersByDateRange(storeId, startDate, endDate);
-      this.orders.set(todayOrders || []);
-      
-      // Get revenue and order count from ledger's running balance for today
-      let totalRevenue = 0;
-      let totalOrderCount = 0;
-      let totalItemsCount = 0;
-      let refundedAmount = 0;
-      try {
-        // Count completed orders directly from orders collection
-        totalOrderCount = await this.orderService.countCompletedOrders(storeId, startDate, endDate);
-        
-        // Use getLatestOrderBalances to get the running totals from orderAccountingLedger
-        const ledger = await this.ledgerService.getLatestOrderBalances(companyId, storeId, today, 'completed');
-        // Also get refunded amount for the same period
-        const refundedLedger = await this.ledgerService.getLatestOrderBalances(companyId, storeId, today, 'refunded');
-        refundedAmount = Number(refundedLedger?.runningBalanceAmount || 0);
-        
-        if (ledger) {
-          // Revenue = runningBalanceAmount (no division, already in PHP)
-          const grossRevenue = Number(ledger.runningBalanceAmount || 0);
-          totalItemsCount = Number(ledger.runningBalanceQty || 0);
-          
-          // Get today's expenses
-          const todayExpenses = await this.expenseService.getExpensesByStore(storeId, startDate, endDate);
-          const expenseTotal = (todayExpenses || []).reduce((s, e) => s + Number((e as any).amount || 0), 0);
-          
-          // Revenue = runningBalanceAmount - (expense + refunded)
-          totalRevenue = grossRevenue - (expenseTotal + refundedAmount);
-        }
-      } catch (ledgerErr) {
-        console.warn('Failed to fetch ledger balances, falling back to order count:', ledgerErr);
-        // Fallback: use order count and calculate revenue from orders
-        totalOrderCount = todayOrders?.length || 0;
-        if (todayOrders && Array.isArray(todayOrders)) {
-          totalRevenue = todayOrders.reduce((sum, order: any) => {
-            return sum + Number(order.totalAmount || 0);
-          }, 0);
-        }
-      }
-      
-      // Set ledger totals
-      this.ledgerTotalRevenue.set(totalRevenue);
-      this.ledgerTotalOrders.set(totalOrderCount);
-      this.ledgerOrderQty.set(totalOrderCount);
-      this.ledgerItemsQty.set(totalItemsCount);
-      this.ledgerCompletedQty.set(totalOrderCount);
+      // Load orders for the requested date range from Firestore
+      const orders = await this.orderService.getOrdersByDateRange(storeId, queryStart, queryEnd);
+      this.orders.set(orders || []);
 
-      // Load today's expenses for the same date range
-      const expenses = await this.expenseService.getExpensesByStore(storeId, startDate, endDate);
+      // Load expenses for the requested date range
+      const expenses = await this.expenseService.getExpensesByStore(storeId, queryStart, queryEnd);
       this.expenses.set(expenses || []);
 
       // Also compute month-to-date and yesterday aggregates for the Overview card
