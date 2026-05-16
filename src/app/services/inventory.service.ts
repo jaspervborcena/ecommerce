@@ -509,7 +509,7 @@ export class InventoryService {
 /**
  * Load rows for a given period and page (fetches from both inventoryTracking and ordersSellingTracking).
  */
-async loadRowsForPeriod(period: string, page: number = 1, storeId?: string, companyId?: string): Promise<void> {
+async loadRowsForPeriod(period: string, page: number = 1, storeId?: string, companyId?: string, startDate?: Date, endDate?: Date): Promise<void> {
   this.isLoading.set(true);
   this.currentPage.set(page);
 
@@ -582,6 +582,48 @@ async loadRowsForPeriod(period: string, page: number = 1, storeId?: string, comp
         salesFilters.push(where('createdAt', '<=', end));
         updatedAtRange = { start, end };
       }
+    } else if (period === 'this_week' || period === 'previous_week') {
+      let start: Date | null = null;
+      let end: Date | null = null;
+      const weekday = now.getDay();
+      const mondayOffset = (weekday + 6) % 7;
+      if (period === 'this_week') {
+        start = new Date(now);
+        start.setDate(now.getDate() - mondayOffset);
+        start.setHours(0, 0, 0, 0);
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        end.setHours(23, 59, 59, 999);
+      } else {
+        const currentWeekStart = new Date(now);
+        currentWeekStart.setDate(now.getDate() - mondayOffset);
+        currentWeekStart.setHours(0, 0, 0, 0);
+        start = new Date(currentWeekStart);
+        start.setDate(currentWeekStart.getDate() - 7);
+        start.setHours(0, 0, 0, 0);
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        end.setHours(23, 59, 59, 999);
+      }
+      console.log(`📅 Filtering by ${period}:`, { period, start: start?.toISOString(), end: end?.toISOString() });
+      if (start && end) {
+        deductionFilters.push(where('deductedAt', '>=', start));
+        deductionFilters.push(where('deductedAt', '<=', end));
+        salesFilters.push(where('createdAt', '>=', start));
+        salesFilters.push(where('createdAt', '<=', end));
+        updatedAtRange = { start, end };
+      }
+    } else if (period === 'date_range' && startDate && endDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      console.log(`📅 Filtering by date range:`, { period, start: start.toISOString(), end: end.toISOString() });
+      deductionFilters.push(where('deductedAt', '>=', start));
+      deductionFilters.push(where('deductedAt', '<=', end));
+      salesFilters.push(where('createdAt', '>=', start));
+      salesFilters.push(where('createdAt', '<=', end));
+      updatedAtRange = { start, end };
     } else if (period === 'this_month' || period === 'previous_month') {
       // Use the date range calculated above
       if (updatedAtRange?.start && updatedAtRange?.end) {
