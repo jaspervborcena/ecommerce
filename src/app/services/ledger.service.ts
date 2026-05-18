@@ -354,14 +354,18 @@ export class LedgerService {
     returns: { amount: number; qty: number };
     refunds: { amount: number; qty: number };
     damages: { amount: number; qty: number };
+    unpaid: { amount: number; qty: number };
+    recovered: { amount: number; qty: number };
   }> {
     try {
-      const types = ['completed','returned', 'refunded', 'damaged'];
+      const types = ['completed','returned', 'refunded', 'damaged', 'unpaid', 'recovered'];
       const result = {
         completed: { amount: 0, qty: 0 },
         returns: { amount: 0, qty: 0 },
         refunds: { amount: 0, qty: 0 },
-        damages: { amount: 0, qty: 0 }
+        damages: { amount: 0, qty: 0 },
+        unpaid: { amount: 0, qty: 0 },
+        recovered: { amount: 0, qty: 0 }
       };
 
       // For each event type, fetch the latest ledger row (if any) and include it if within range
@@ -415,6 +419,12 @@ export class LedgerService {
           } else if (et === 'damaged') {
             result.damages.amount += amt;
             result.damages.qty += qty;
+          } else if (et === 'unpaid') {
+            result.unpaid.amount += amt;
+            result.unpaid.qty += qty;
+          } else if (et === 'recovered') {
+            result.recovered.amount += amt;
+            result.recovered.qty += qty;
           }
         } catch (e) {
           console.warn(`LedgerService.getAdjustmentTotals: failed to fetch latest ${et}`, e);
@@ -429,7 +439,9 @@ export class LedgerService {
         completed: { amount: 0, qty: 0 },
         returns: { amount: 0, qty: 0 },
         refunds: { amount: 0, qty: 0 },
-        damages: { amount: 0, qty: 0 }
+        damages: { amount: 0, qty: 0 },
+        unpaid: { amount: 0, qty: 0 },
+        recovered: { amount: 0, qty: 0 }
       };
     }
   }

@@ -201,6 +201,8 @@ export class InvoiceService {
             items: batch.items,
             // If saveAsOpen, set status to OPEN, otherwise COMPLETED
             status: saveAsOpen ? 'OPEN' : OrderDetailsStatus.COMPLETED
+            ,
+            version: environment.version
           });
 
           orderDetailsBatchDocs.push({ ref: orderDetailsDocRef as DocumentReference, data: orderDetailsWithSecurity });
@@ -561,6 +563,7 @@ export class InvoiceService {
             createdBy: currentUserId,
             createdAt: now,
             updatedAt: now,
+            version: environment.version,
             _offlineCreated: true
           };
           

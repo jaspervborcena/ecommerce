@@ -158,6 +158,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/help/help.component').then(m => m.HelpComponent)
   },
   {
+    path: 'versions',
+    loadComponent: () => import('./pages/versions/versions.component').then(m => m.VersionsComponent)
+  },
+  {
     path: 'account-settings',
     loadComponent: () => import('./pages/account-settings/account-settings.component').then(m => m.AccountSettingsComponent)
   },
