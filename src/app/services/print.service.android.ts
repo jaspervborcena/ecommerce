@@ -1109,7 +1109,7 @@ export class PrintServiceAndroid {
       branchName = receiptData.branchName;
     }
     if (branchName) {
-      html += `<div><strong>Branch:</strong> ${branchName}</div>`;
+      html += `        <div class="bold">Branch</div>\n        <div>${branchName}</div>`;
     }
     html += `
         <div>${receiptData?.storeInfo?.address || 'Store Address'}</div>
