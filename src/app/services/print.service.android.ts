@@ -439,11 +439,12 @@ export class PrintServiceAndroid {
     
     commands += separatorLine;
     
-    // Payment Method with asterisk (*) for selected and O for unselected
+    // Payment Method - single-line
     const isCashSale = receiptData?.isCashSale !== false; // Default to true unless explicitly false
     const isChargeSale = receiptData?.isChargeSale === true; // Only true if explicitly set
+    const paymentMethod = isCashSale ? 'Cash' : (isChargeSale ? 'Charge' : 'N/A');
     commands += '\x1B\x45\x01'; // Bold for payment method
-    commands += `Cash: ${isCashSale ? '*' : 'O'}   Charge: ${isChargeSale ? '*' : 'O'}\n`;
+    commands += `Payment: ${paymentMethod}\n`;
     commands += '\x1B\x45\x00'; // Bold off
     
     commands += separatorLine;
@@ -1141,18 +1142,11 @@ export class PrintServiceAndroid {
     const isCashSale = receiptData?.isCashSale !== false; // Default to true unless explicitly false
     const isChargeSale = receiptData?.isChargeSale === true; // Only true if explicitly set
     
+    const paymentMethod = isCashSale ? 'Cash' : (isChargeSale ? 'Charge' : 'N/A');
+
     html += `
       <div style="margin: 10px 0;">
-        <div style="display: flex; justify-content: center; gap: 20px;">
-          <div style="display: flex; align-items: center; gap: 5px;">
-            <span>Cash</span>
-            <div style="width: 12px; height: 12px; border: 1px solid #000; border-radius: 50%; ${isCashSale ? 'background-color: #000;' : ''}"></div>
-          </div>
-          <div style="display: flex; align-items: center; gap: 5px;">
-            <span>Charge</span>
-            <div style="width: 12px; height: 12px; border: 1px solid #000; border-radius: 50%; ${isChargeSale ? 'background-color: #000;' : ''}"></div>
-          </div>
-        </div>
+        <div><strong>Payment:</strong> ${paymentMethod}</div>
       </div>
     `;
 
