@@ -82,7 +82,8 @@ export interface OrderAccountingLedger {
   storeId: string;
   orderId: string;
   // Event type describing the kind of ledger entry
-  eventType: 'order' | 'returned' | 'refunded' | 'cancelled' | 'damaged';
+  // Note: use 'completed' for successful orders. Added unpaid/recovered types.
+  eventType: 'completed' | 'returned' | 'refunded' | 'cancelled' | 'damaged' | 'unpaid' | 'recovered';
 
   // Monetary and quantity impact of this event (cumulative for the day)
   amount: number;

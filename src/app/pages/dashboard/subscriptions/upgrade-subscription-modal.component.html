@@ -35,7 +35,15 @@
       <div class="grid-2">
         <div class="section">
           <label>Promo Code (optional)</label>
-          <input type="text" [(ngModel)]="promoCode" placeholder="Enter code" />
+          <div class="promo-input-group">
+            <input type="text" [(ngModel)]="promoCode" placeholder="Enter code" />
+            <button type="button" class="btn-apply" (click)="applyPromoCode()" [disabled]="promoChecking()">
+              {{ promoChecking() ? 'Checking…' : 'Apply' }}
+            </button>
+          </div>
+          <p class="promo-message" *ngIf="promoMessage()" [class.valid]="promoValid()" [class.invalid]="!promoValid()">
+            {{ promoMessage() }}
+          </p>
         </div>
         <div class="section">
           <label>Referral Code (optional)</label>
@@ -85,6 +93,15 @@
     <!-- Footer -->
     <div class="modal-footer">
       <button class="btn-cancel" (click)="close()">Cancel</button>
+      <button 
+        *ngIf="couponIsFree() && promoValid()" 
+        class="btn-primary" 
+        type="button" 
+        (click)="activateFreeCoupon()" 
+        [disabled]="submitting()"
+      >
+        {{ submitting() ? 'Activating…' : 'Activate Free Subscription' }}
+      </button>
     </div>
   </div>
   
