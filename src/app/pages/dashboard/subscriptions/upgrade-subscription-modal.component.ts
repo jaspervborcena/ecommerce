@@ -11,6 +11,7 @@ import { ToastService } from '../../../shared/services/toast.service';
 import { SubscriptionRequest } from '../../../interfaces/subscription-request.interface';
 import { OfflineDocumentService } from '../../../core/services/offline-document.service';
 import { PaypalService } from '../../../services/paypal.service';
+import { CouponService, CouponDoc } from '../../../services/coupon.service';
 import { environment } from '../../../../environments/environment';
 
 type Tier = 'basic' | 'standard' | 'premium';
@@ -32,6 +33,7 @@ export class UpgradeSubscriptionModalComponent implements OnChanges, AfterViewCh
   private readonly firestore = inject(Firestore);
   private readonly offlineDocService = inject(OfflineDocumentService);
   private readonly paypalService = inject(PaypalService);
+  private readonly couponService = inject(CouponService);
 
   @Input() isOpen = false;
   @Input() companyId = '';
@@ -62,6 +64,11 @@ export class UpgradeSubscriptionModalComponent implements OnChanges, AfterViewCh
   durationMonths = signal(1);
   promoCode = '';
   referralCode = '';
+  promoValid = signal(false);
+  promoMessage = signal('');
+  promoChecking = signal(false);
+  couponIsFree = signal(false);
+  appliedCoupon?: CouponDoc;
   paymentReference = '';
   amountPaid: number | null = null;
   currency = 'PHP';
@@ -104,6 +111,80 @@ export class UpgradeSubscriptionModalComponent implements OnChanges, AfterViewCh
   onTabChange(tab: PaymentMethod) {
     this.activeTab = tab;
     setTimeout(() => this.initPayPalButtons(), 100);
+  }
+
+  async applyPromoCode() {
+    const code = this.promoCode?.trim().toUpperCase() || '';
+    if (!code) {
+      this.promoValid.set(false);
+      this.couponIsFree.set(false);
+      this.promoMessage.set('Enter a promo code to apply it');
+      return;
+    }
+
+    this.promoChecking.set(true);
+    this.promoValid.set(false);
+    this.couponIsFree.set(false);
+    this.promoMessage.set('');
+    this.appliedCoupon = undefined;
+
+    try {
+      const coupon = await this.couponService.getCoupon(code);
+      if (!coupon) {
+        this.promoMessage.set('Invalid promo code.');
+        return;
+      }
+
+      const error = this.couponService.validateCoupon(coupon, 'PH', false);
+      if (error) {
+        this.promoMessage.set(error);
+        return;
+      }
+
+      this.appliedCoupon = coupon;
+      this.promoValid.set(true);
+      const isFree = coupon.durationDays > 0;
+      this.couponIsFree.set(isFree);
+
+      if (isFree) {
+        this.promoMessage.set(`✓ Coupon valid! ${coupon.description} — ${coupon.durationDays} days free.`);
+      } else {
+        this.promoMessage.set(`✓ Coupon valid! ${coupon.description}`);
+      }
+    } catch (err: any) {
+      console.error('Promo apply failed:', err);
+      this.promoMessage.set('Failed to validate promo code. Please try again.');
+    } finally {
+      this.promoChecking.set(false);
+    }
+  }
+
+  async activateFreeCoupon(): Promise<void> {
+    if (!this.companyId || !this.storeId) {
+      this.toast.error('Missing company or store information.');
+      return;
+    }
+
+    const code = this.promoCode?.trim().toUpperCase() || '';
+    if (!code) {
+      this.toast.error('Please enter a promo code first.');
+      return;
+    }
+
+    try {
+      this.submitting.set(true);
+      const result = await this.couponService.applyCouponSubscription(code, this.companyId, this.storeId, 'PH', false);
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+      this.toast.success(result.message);
+      this.completed.emit();
+      this.close();
+    } catch (err: any) {
+      this.toast.error(err?.message || 'Unable to activate coupon.');
+    } finally {
+      this.submitting.set(false);
+    }
   }
 
   private async loadPayPalSdk(): Promise<void> {
@@ -556,6 +637,11 @@ export class UpgradeSubscriptionModalComponent implements OnChanges, AfterViewCh
     this.durationMonths.set(1);
     this.promoCode = '';
     this.referralCode = '';
+    this.promoValid.set(false);
+    this.promoMessage.set('');
+    this.promoChecking.set(false);
+    this.couponIsFree.set(false);
+    this.appliedCoupon = undefined;
     this.paymentReference = '';
     this.amountPaid = null;
     this.receiptFile = null;
@@ -585,7 +671,12 @@ export class UpgradeSubscriptionModalComponent implements OnChanges, AfterViewCh
       // Apply initial values if provided
       if (this.initialTier) this.selectedTier.set(this.initialTier);
       if (this.initialDurationMonths && this.initialDurationMonths > 0) this.durationMonths.set(this.initialDurationMonths);
-      if (this.initialPromoCode !== undefined) this.promoCode = this.initialPromoCode || '';
+      if (this.initialPromoCode !== undefined) {
+        this.promoCode = this.initialPromoCode || '';
+        this.promoValid.set(false);
+        this.couponIsFree.set(false);
+        this.promoMessage.set('');
+      }
       if (this.initialReferralCode !== undefined) this.referralCode = this.initialReferralCode || '';
       // Prefill amount with current total if empty or invalid
       const amt = this.amountPaid;
