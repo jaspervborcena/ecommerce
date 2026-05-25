@@ -404,17 +404,9 @@ export class PrintServiceAndroid {
     commands += '\x1B\x61\x01'; // Center alignment
     commands += '\x1B\x45\x01'; // Bold on
     commands += (receiptData?.storeInfo?.storeName || 'Store Name') + '\n';
-    // Add branch name if it exists in storeInfo, else fallback to order.branchName or receiptData.branchName
-    let branchName = '';
+    // Add branch name if it exists and is not empty
     if (receiptData?.storeInfo?.branchName && receiptData.storeInfo.branchName.trim() !== '') {
-      branchName = receiptData.storeInfo.branchName;
-    } else if (receiptData?.order?.branchName && receiptData.order.branchName.trim() !== '') {
-      branchName = receiptData.order.branchName;
-    } else if (receiptData?.branchName && receiptData.branchName.trim() !== '') {
-      branchName = receiptData.branchName;
-    }
-    if (branchName) {
-      commands += `Branch: ${branchName}\n`;
+      commands += `Branch: ${receiptData.storeInfo.branchName}\n`;
     }
     commands += '\x1B\x45\x00'; // Bold off
     
@@ -628,6 +620,7 @@ export class PrintServiceAndroid {
     commands += '\x1B\x61\x00'; // Reset alignment
     commands += '\n\n\n\n'; // Extra feed for complete printing
     commands += '\x1D\x56\x41'; // Cut paper
+    commands += '\x1B\x70\x00\x19\xF9'; // Open cash drawer (pin 2, activation)
     
     return commands;
   }
