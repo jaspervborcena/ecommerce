@@ -1,6 +1,6 @@
 ﻿import { Injectable, inject } from '@angular/core';
 import { IndexedDBService } from '../core/services/indexeddb.service';
-import { generateESCPOSCommands } from './escpos-utils';
+import { generateESCPOSCommands, encodeEscposStringToBytes } from './escpos-utils';
 
 // Web Bluetooth API types (simplified)
 declare const navigator: any;
@@ -423,8 +423,7 @@ export class PrintServiceWeb {
     const escposCommands = this.generateESCPOSCommands(receiptData);
     
     // Convert string to Uint8Array for Bluetooth transmission
-    const encoder = new TextEncoder();
-    const data = encoder.encode(escposCommands);
+    const data = encodeEscposStringToBytes(escposCommands);
     
     // Check characteristic properties
     const properties = this.bluetoothCharacteristic.properties;
@@ -541,8 +540,7 @@ export class PrintServiceWeb {
       }
 
       const escPosCommands = this.generateESCPOSCommands(receiptData);
-      const encoder = new TextEncoder();
-      const data = encoder.encode(escPosCommands);
+      const data = encodeEscposStringToBytes(escPosCommands);
 
       if (!port.writable) {
         throw new Error('USB port is not writable');

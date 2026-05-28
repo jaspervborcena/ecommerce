@@ -27,7 +27,6 @@ export function generateESCPOSCommands(receiptData: any, paperConfig: PaperSizeC
   commands += '\x1B\x40'; // Initialize
   commands += '\x1D\x21\x00'; // Normal font size (not condensed)
   commands += '\x1B\x4D\x00'; // Font A (clearer than Font B)
-  commands += '\x1B\x7B\x32'; // Increase print density for darker text
   
   // Helper: sanitize text for ESC/POS printing
   const sanitizeText = (input: any) => {
@@ -41,11 +40,14 @@ export function generateESCPOSCommands(receiptData: any, paperConfig: PaperSizeC
          .replace(/\u02C6/g, '^');
     // Normalize and strip diacritics (é -> e)
     try { s = s.normalize('NFKD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {}
+    // Remove non-ASCII characters so the printer only receives safe bytes
+    s = s.replace(/[^\x00-\x7F]/g, '');
     // Remove control characters except LF (\n) and CR (\r)
     s = s.replace(/[\x00-\x09\x0B\x0C\x0E-\x1F]/g, '');
     // Trim leading/trailing whitespace
     return s.trim();
   };
+
 
   // Store header - CENTERED and LARGER (same as Sales Invoice)
   commands += '\x1B\x61\x01'; // Center alignment
@@ -274,3 +276,26 @@ export function generateESCPOSCommands(receiptData: any, paperConfig: PaperSizeC
   
   return commands;
 }
+
+export function encodeEscposStringToBytes(input: string): Uint8Array {
+  const bytes: number[] = [];
+  for (const char of input) {
+    const code = char.charCodeAt(0);
+    if (code <= 0x7F) {
+      bytes.push(code);
+      continue;
+    }
+    let normalized = char;
+    try {
+      normalized = char.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+    } catch (e) {
+      normalized = char;
+    }
+    for (const normalizedChar of normalized) {
+      const normalizedCode = normalizedChar.charCodeAt(0);
+      bytes.push(normalizedCode <= 0x7F ? normalizedCode : 0x3F);
+    }
+  }
+  return new Uint8Array(bytes);
+}
+
