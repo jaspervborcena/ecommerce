@@ -1,7 +1,7 @@
 ﻿import { Injectable } from '@angular/core';
 import { BleClient, BleDevice } from '@capacitor-community/bluetooth-le';
 import { Capacitor } from '@capacitor/core';
-import { generateESCPOSCommands } from './escpos-utils';
+import { generateESCPOSCommands, encodeEscposStringToBytes } from './escpos-utils';
 
 export interface PaperSizeConfig {
   width: string;
@@ -245,8 +245,7 @@ export class ThermalPrinterService {
     const paperSize = receiptData?._paperSize || '58mm';
     const paperConfig = this.getPaperSizeConfig(paperSize);
     const escposCommands = generateESCPOSCommands(receiptData, paperConfig);
-    const encoder = new TextEncoder();
-    const result = encoder.encode(escposCommands);
+    const result = encodeEscposStringToBytes(escposCommands);
     console.log(`Γ£à Generated ${result.length} bytes of shared ESC/POS data`);
     return result;
   }

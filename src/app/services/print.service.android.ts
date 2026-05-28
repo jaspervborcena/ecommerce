@@ -2,7 +2,7 @@
 import { IndexedDBService } from '../core/services/indexeddb.service';
 import { ThermalPrinterService } from './thermal-printer.service';
 import { Capacitor } from '@capacitor/core';
-import { generateESCPOSCommands } from './escpos-utils';
+import { generateESCPOSCommands, encodeEscposStringToBytes } from './escpos-utils';
 
 // Web Bluetooth API types (simplified)
 declare const navigator: any;
@@ -338,8 +338,7 @@ export class PrintServiceAndroid {
     const escposCommands = this.generateESCPOSCommands(receiptData);
     
     // Convert string to Uint8Array for Bluetooth transmission
-    const encoder = new TextEncoder();
-    const data = encoder.encode(escposCommands);
+    const data = encodeEscposStringToBytes(escposCommands);
     
     // Check characteristic properties
     const properties = this.bluetoothCharacteristic.properties;
