@@ -962,8 +962,8 @@ export class PrintServiceAndroid {
             <div style="font-size: 10px; color: #666;">${item.skuId || item.productId || 'N/A'}</div>
           </td>
           <td style="padding: 4px 2px; text-align: center; vertical-align: top;">${qtyDisplay}</td>
-          <td style="padding: 4px 2px; text-align: right; vertical-align: top;">Γé▒${(item.sellingPrice || item.price || 0).toFixed(2)}</td>
-          <td style="padding: 4px 2px; text-align: right; vertical-align: top;">Γé▒${(item.total || 0).toFixed(2)}</td>
+          <td style="padding: 4px 2px; text-align: right; vertical-align: top;">₱${(item.sellingPrice || item.price || 0).toFixed(2)}</td>
+          <td style="padding: 4px 2px; text-align: right; vertical-align: top;">₱${(item.total || 0).toFixed(2)}</td>
         </tr>
       `;
     });
@@ -974,16 +974,16 @@ export class PrintServiceAndroid {
       <div class="line"></div>
       
       <table style="width: 100%;">
-        <tr><td>Subtotal:</td><td class="right">Γé▒${(receiptData?.subtotal || 0).toFixed(2)}</td></tr>
-        <tr><td>VAT (12%):</td><td class="right">Γé▒${(receiptData?.vatAmount || 0).toFixed(2)}</td></tr>
-        <tr><td>VAT Exempt:</td><td class="right">Γé▒${(receiptData?.vatExempt || 0).toFixed(2)}</td></tr>
-        <tr><td>Discount:</td><td class="right">Γé▒${(receiptData?.discount || 0).toFixed(2)}</td></tr>
+        <tr><td>Subtotal:</td><td class="right">₱${(receiptData?.subtotal || 0).toFixed(2)}</td></tr>
+        <tr><td>VAT (12%):</td><td class="right">₱${(receiptData?.vatAmount || 0).toFixed(2)}</td></tr>
+        <tr><td>VAT Exempt:</td><td class="right">₱${(receiptData?.vatExempt || 0).toFixed(2)}</td></tr>
+        <tr><td>Discount:</td><td class="right">₱${(receiptData?.discount || 0).toFixed(2)}</td></tr>
     `;
 
     html += `
         <tr style="border-top: 1px solid #000; font-weight: bold;">
           <td style="padding-top: 5px;"><strong>TOTAL:</strong></td>
-          <td class="right" style="padding-top: 5px;"><strong>Γé▒${(receiptData?.totalAmount || receiptData?.netAmount || 0).toFixed(2)}</strong></td>
+          <td class="right" style="padding-top: 5px;"><strong>₱${(receiptData?.totalAmount || receiptData?.netAmount || 0).toFixed(2)}</strong></td>
         </tr>
       </table>`;
 
