@@ -29,39 +29,57 @@ export function generateESCPOSCommands(receiptData: any, paperConfig: PaperSizeC
   commands += '\x1B\x4D\x00'; // Font A (clearer than Font B)
   commands += '\x1B\x7B\x32'; // Increase print density for darker text
   
+  // Helper: sanitize text for ESC/POS printing
+  const sanitizeText = (input: any) => {
+    if (input === null || input === undefined) return '';
+    let s = String(input);
+    // Replace common typographic characters with ASCII equivalents
+    s = s.replace(/\u2018|\u2019|\u201A|\u201B/g, "'")
+         .replace(/\u201C|\u201D|\u201E/g, '"')
+         .replace(/\u2013|\u2014/g, '-')
+         .replace(/\u2026/g, '...')
+         .replace(/\u02C6/g, '^');
+    // Normalize and strip diacritics (é -> e)
+    try { s = s.normalize('NFKD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {}
+    // Remove control characters except LF (\n) and CR (\r)
+    s = s.replace(/[\x00-\x09\x0B\x0C\x0E-\x1F]/g, '');
+    // Trim leading/trailing whitespace
+    return s.trim();
+  };
+
   // Store header - CENTERED and LARGER (same as Sales Invoice)
   commands += '\x1B\x61\x01'; // Center alignment
   commands += '\x1B\x45\x01'; // Bold on
-  commands += (receiptData?.storeInfo?.storeName || 'Store Name') + '\n';
+  commands += sanitizeText(receiptData?.storeInfo?.storeName || 'Store Name') + '\n';
   // Add branch name if it exists and is not empty
-  if (receiptData?.storeInfo?.branchName && receiptData.storeInfo.branchName.trim() !== '') {
-    commands += `Branch: ${receiptData.storeInfo.branchName}\n`;
+  if (receiptData?.storeInfo?.branchName && sanitizeText(receiptData.storeInfo.branchName) !== '') {
+    commands += `Branch: ${sanitizeText(receiptData.storeInfo.branchName)}\n`;
   }
   commands += '\x1B\x45\x00'; // Bold off
   
   // Store details - CENTERED with normal font
-  commands += (receiptData?.storeInfo?.address || 'Store Address') + '\n';
-  commands += `Tel: ${receiptData?.storeInfo?.phone || 'N/A'}\n`;
-  commands += `Email: ${receiptData?.storeInfo?.email || 'N/A'}\n`;
-  commands += `TIN: ${receiptData?.storeInfo?.tin || 'N/A'}\n`;
+  commands += (sanitizeText(receiptData?.storeInfo?.address) || 'Store Address') + '\n';
+  commands += `Tel: ${sanitizeText(receiptData?.storeInfo?.phone) || 'N/A'}\n`;
+  commands += `Email: ${sanitizeText(receiptData?.storeInfo?.email) || 'N/A'}\n`;
+  commands += `TIN: ${sanitizeText(receiptData?.storeInfo?.tin) || 'N/A'}\n`;
   
   // BIR Information
   if (receiptData?.storeInfo?.birPermitNo) {
-    commands += `BIR: ${receiptData.storeInfo.birPermitNo}\n`;
+    commands += `BIR: ${sanitizeText(receiptData.storeInfo.birPermitNo)}\n`;
   }
   if (receiptData?.storeInfo?.inclusiveSerialNumber) {
-    commands += `SN: ${receiptData.storeInfo.inclusiveSerialNumber}\n`;
+    commands += `SN: ${sanitizeText(receiptData.storeInfo.inclusiveSerialNumber)}\n`;
   }
   if (receiptData?.storeInfo?.minNumber) {
-    commands += `MIN: ${receiptData.storeInfo.minNumber}\n`;
+    commands += `MIN: ${sanitizeText(receiptData.storeInfo.minNumber)}\n`;
   }
-  
-  commands += `Invoice #: ${receiptData?.invoiceNumber || 'Auto-generated'}\n`;
+
+  commands += `Invoice #: ${sanitizeText(receiptData?.invoiceNumber) || 'Auto-generated'}\n`;
   
   // Invoice Type (centered, bold, slightly larger)
   commands += '\x1D\x21\x01'; // Double height for invoice type
   commands += '\x1B\x45\x01'; // Bold on
-  commands += (receiptData?.storeInfo?.invoiceType || 'SALES INVOICE') + '\n';
+  commands += (sanitizeText(receiptData?.storeInfo?.invoiceType) || 'SALES INVOICE') + '\n';
   commands += '\x1B\x45\x00'; // Bold off
   commands += '\x1D\x21\x00'; // Back to normal size
   commands += '\x1B\x61\x00'; // Left alignment for rest
@@ -80,16 +98,16 @@ export function generateESCPOSCommands(receiptData: any, paperConfig: PaperSizeC
   
   // Customer info - BOLD for sold to
   commands += '\x1B\x45\x01'; // Bold on
-  const customerName = receiptData?.customerName || 'Walk-in Customer';
+  const customerName = sanitizeText(receiptData?.customerName) || 'Walk-in Customer';
   commands += `SOLD TO: ${customerName}\n`;
   commands += '\x1B\x45\x00'; // Bold off
   
-  if (receiptData?.customerName && receiptData.customerName !== 'Walk-in Customer') {
-    if (receiptData?.customerAddress && receiptData?.customerAddress !== 'N/A') {
-      commands += `Address: ${receiptData.customerAddress}\n`;
+    if (receiptData?.customerName && sanitizeText(receiptData.customerName) !== 'Walk-in Customer') {
+    if (receiptData?.customerAddress && sanitizeText(receiptData.customerAddress) !== '') {
+      commands += `Address: ${sanitizeText(receiptData.customerAddress)}\n`;
     }
-    if (receiptData?.customerTin && receiptData?.customerTin !== 'N/A') {
-      commands += `TIN: ${receiptData.customerTin}\n`;
+    if (receiptData?.customerTin && sanitizeText(receiptData.customerTin) !== '') {
+      commands += `TIN: ${sanitizeText(receiptData.customerTin)}\n`;
     }
   }
   
@@ -97,7 +115,7 @@ export function generateESCPOSCommands(receiptData: any, paperConfig: PaperSizeC
   
   // Date and Cashier - BOLD
   commands += '\x1B\x45\x01'; // Bold on
-  commands += `Cashier: ${receiptData?.cashier || 'N/A'}\n`;
+  commands += `Cashier: ${sanitizeText(receiptData?.cashier) || 'N/A'}\n`;
   const date = new Date(receiptData?.receiptDate || new Date());
   commands += `${date.toLocaleDateString()} ${date.toLocaleTimeString()}\n`;
   commands += '\x1B\x45\x00'; // Bold off
@@ -127,7 +145,7 @@ export function generateESCPOSCommands(receiptData: any, paperConfig: PaperSizeC
       
       // Product name - limited to fit paper width
       const maxProductNameLength = productColWidth - 1;
-      const productName = (item.productName || item.name || 'Item').substring(0, maxProductNameLength);
+      const productName = sanitizeText(item.productName || item.name || 'Item').substring(0, maxProductNameLength);
       const productPadded = productName.padEnd(maxProductNameLength);
       
       // Total - right aligned
@@ -139,7 +157,7 @@ export function generateESCPOSCommands(receiptData: any, paperConfig: PaperSizeC
       commands += '\x1B\x45\x00'; // Bold off
 
       // SKU on separate indented line (show SKU after product name)
-      const skuLine = `    SKU: ${item.skuId || item.productId || ''}`;
+      const skuLine = `    SKU: ${sanitizeText(item.skuId || item.productId || '')}`;
       commands += `${skuLine}\n`;
 
       // Unit price on separate line, indented
@@ -237,7 +255,7 @@ export function generateESCPOSCommands(receiptData: any, paperConfig: PaperSizeC
   if (receiptData?.validityNotice) {
     commands += '\x1B\x61\x01'; // Center alignment
     commands += '\n';
-    commands += receiptData.validityNotice + '\n';
+    commands += sanitizeText(receiptData.validityNotice) + '\n';
     commands += '\x1B\x61\x00'; // Reset alignment
     commands += '\n';
   }
