@@ -246,7 +246,6 @@ export function generateESCPOSCommands(receiptData: any, paperConfig: PaperSizeC
   commands += '\x1B\x61\x01'; // Center alignment
   commands += 'Thank you for your purchase!\n';
   commands += 'Please come again.\n';
-  commands += 'This document is not valid for claim of input tax.\n';
   commands += '\x1B\x61\x00'; // Reset alignment
   commands += '\n\n\n\n'; // Extra feed for complete printing
   commands += '\x1D\x56\x41'; // Cut paper

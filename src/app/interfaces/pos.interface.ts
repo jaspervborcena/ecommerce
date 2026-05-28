@@ -2,7 +2,7 @@ import { Product } from './product.interface';
 
 export enum ReceiptValidityNotice {
   BIR_ACCREDITED = 'This serves as your invoice.',
-  NON_ACCREDITED = 'This receipt serves as a sales acknowledgment receipt.This document is not valid for claim of input tax.'
+  NON_ACCREDITED = 'This receipt serves as a sales acknowledgment receipt. This document is not valid for claim of input tax.'
 }
 
 export interface OrderStatusHistoryEntry {
