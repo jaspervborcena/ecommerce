@@ -1,5 +1,15 @@
 # Version Notes
 
+## 2026-05-28
+- **Removed currency symbol (₱)** from all receipt amounts for regional flexibility and cleaner display
+- **Updated printing services** with improved receipt formatting and template structure
+- **Added cash or charge** payment type indicator refinements
+- **Enhanced subscription management** - Updated subscription data flow from stores with improved validation
+- **Improved product validation** - Added validation for duplicate products and subscription handling
+- **Updated receipt template** with better formatting and layout improvements
+- **Added font structure** - Improved typography and text rendering in receipts and UI
+- **Enhanced subscription UI** - Added submit button and improved form handling in subscription features
+
 ## 2026-05-19
 - Added a new `/versions` page to display release notes and top changes.
 - Created `VersionsComponent` to load markdown from `assets/versions.md`.

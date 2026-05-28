@@ -103,7 +103,13 @@ This is a **sophisticated, enterprise-grade POS system** with advanced offline c
 
 ## 🌟 Latest Features & Updates
 
-### 💳 **Subscription Management System (NEW!)**
+### ✨ **v1.0.2 - Receipt & Build Optimization (May 28, 2026)**
+- **Cleaner Receipt Formatting** - Removed currency symbols from receipt amounts for regional flexibility
+- **Fixed Receipt Layout** - Eliminated duplicate "This document is not valid for claim of input tax" message
+- **Fresh Android APK** - Rebuilt APK with updated Capacitor dependencies (4.52 MB)
+- **Build Optimization** - Removed legacy Android folder for clean Capacitor integration
+
+### 💳 **Subscription Management System**
 - **Multi-Tier Plans** - Freemium, Standard, Premium, and Enterprise subscription tiers
 - **Billing Dashboard** - Comprehensive subscription management interface with filtering and CSV export
 - **Payment Integration** - Support for GCash, PayMaya, and bank transfers
