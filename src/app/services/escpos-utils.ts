@@ -23,6 +23,9 @@ export function generateESCPOSCommands(receiptData: any, paperConfig: PaperSizeC
   const separatorLine = '-'.repeat(lineChars) + '\n';
   const doubleSeparatorLine = '='.repeat(lineChars) + '\n';
   
+  // Clear any junk from printer buffer with form feed
+  commands += '\x0C'; // Form feed - clears page and positions at top
+  
   // Initialize printer with better quality settings
   commands += '\x1B\x40'; // Initialize
   commands += '\x1D\x21\x00'; // Normal font size (not condensed)
