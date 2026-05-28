@@ -54,7 +54,7 @@ export class UpgradeSubscriptionModalComponent implements OnChanges, AfterViewCh
   activeTab: PaymentMethod = 'credit_card';
   paypalStatus = signal<'success' | 'error' | ''>('');
   private paypalSdkLoaded = false;
-  private paypalButtonsInitializing = false;
+  paypalButtonsInitializing = false;
   private paypalClientId: string | null = environment.paypal.clientId || null;
   private paypalSandbox = environment.paypal.sandbox;
   private readonly isProduction = environment.production;
@@ -111,6 +111,16 @@ export class UpgradeSubscriptionModalComponent implements OnChanges, AfterViewCh
   onTabChange(tab: PaymentMethod) {
     this.activeTab = tab;
     setTimeout(() => this.initPayPalButtons(), 100);
+  }
+
+  public scrollToPayPal(): void {
+    const container = document.getElementById('paypal-button-container');
+    if (container) {
+      container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    if (!this.paypalButtonsInitializing) {
+      void this.initPayPalButtons();
+    }
   }
 
   async applyPromoCode() {
@@ -437,6 +447,39 @@ export class UpgradeSubscriptionModalComponent implements OnChanges, AfterViewCh
     }
   }
 
+  handleMainAction() {
+    if (this.couponIsFree() && this.promoValid()) {
+      void this.activateFreeCoupon();
+      return;
+    }
+
+    if (this.activeTab === 'credit_card') {
+      this.scrollToPayPal();
+      return;
+    }
+
+    void this.submit();
+  }
+
+  mainActionLabel(): string {
+    if (this.couponIsFree() && this.promoValid()) {
+      return this.submitting() ? 'Activating…' : 'Activate Free Subscription';
+    }
+
+    if (this.activeTab === 'credit_card') {
+      return this.paypalButtonsInitializing ? 'Preparing Payment…' : 'Submit Upgrade Request';
+    }
+
+    return this.submitting() ? 'Submitting…' : 'Submit Upgrade Request';
+  }
+
+  mainActionDisabled(): boolean {
+    if (this.submitting()) return true;
+    if (this.couponIsFree() && !this.promoValid()) return true;
+    if (this.activeTab !== 'credit_card') return !this.canSubmit();
+    return false;
+  }
+
   openQrPreview() {
     const url = this.accountInfo[this.activeTab].qrUrl;
     if (!url) return;
@@ -676,6 +719,9 @@ export class UpgradeSubscriptionModalComponent implements OnChanges, AfterViewCh
         this.promoValid.set(false);
         this.couponIsFree.set(false);
         this.promoMessage.set('');
+        if (this.promoCode) {
+          void this.applyPromoCode();
+        }
       }
       if (this.initialReferralCode !== undefined) this.referralCode = this.initialReferralCode || '';
       // Prefill amount with current total if empty or invalid
