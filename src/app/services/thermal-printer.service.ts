@@ -1,6 +1,15 @@
 ﻿import { Injectable } from '@angular/core';
 import { BleClient, BleDevice } from '@capacitor-community/bluetooth-le';
 import { Capacitor } from '@capacitor/core';
+import { generateESCPOSCommands } from './escpos-utils';
+
+export interface PaperSizeConfig {
+  width: string;
+  maxWidth: string;
+  receiptWidth: number;
+  fontSize: string;
+  lineChars: number;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -218,272 +227,27 @@ export class ThermalPrinterService {
   }
 
   /**
+   * Map paper size to shared ESC/POS width config
+   */
+  private getPaperSizeConfig(paperSize: string = '58mm'): PaperSizeConfig {
+    const configs: Record<string, PaperSizeConfig> = {
+      '58mm': { width: '58mm', maxWidth: '210px', receiptWidth: 32, fontSize: '11px', lineChars: 32 },
+      '80mm': { width: '80mm', maxWidth: '300px', receiptWidth: 48, fontSize: '12px', lineChars: 48 },
+      '127mm': { width: '127mm', maxWidth: '480px', receiptWidth: 64, fontSize: '13px', lineChars: 64 }
+    };
+    return configs[paperSize] || configs['58mm'];
+  }
+
+  /**
    * Generate ESC/POS commands for receipt
    */
   private generateESCPOS(receiptData: any): Uint8Array {
-    const commands: number[] = [];
-
-
-    // Initialize printer - ESC @
-    commands.push(0x1B, 0x40);
-    
-    // Center align - ESC a 1
-    commands.push(0x1B, 0x61, 0x01);
-    
-    // Double size - GS ! 0x11
-    commands.push(0x1D, 0x21, 0x11);
-    
-    // Store name
-    const storeName = receiptData.storeInfo?.storeName || 'STORE NAME';
-    for (let i = 0; i < storeName.length; i++) {
-      commands.push(storeName.charCodeAt(i));
-    }
-    commands.push(0x0A);
-
-    // Branch name (centered, bold, slightly larger, labeled)
-    // If branch name exists in receiptData, print it
-    const branchName = receiptData?.storeInfo?.branchName || receiptData?.order?.branchName || receiptData?.branchName;
-    if (branchName && branchName.trim() !== '') {
-      // Center align
-      commands.push(0x1B, 0x61, 0x01);
-      // Bold on
-      commands.push(0x1B, 0x45, 0x01);
-      // Double height
-      commands.push(0x1D, 0x21, 0x01);
-      const branchLabel = `Branch: ${branchName}`;
-      for (let i = 0; i < branchLabel.length; i++) {
-        commands.push(branchLabel.charCodeAt(i));
-      }
-      commands.push(0x0A);
-      // Back to normal size and bold off
-      commands.push(0x1D, 0x21, 0x00);
-      commands.push(0x1B, 0x45, 0x00);
-      // Extra LF for spacing
-      commands.push(0x0A);
-    }
-
-    // Normal size - GS ! 0
-    commands.push(0x1D, 0x21, 0x00);
-    
-    // Store address
-    if (receiptData.storeInfo?.address) {
-      const addr = String(receiptData.storeInfo.address);
-      for (let i = 0; i < addr.length; i++) {
-        commands.push(addr.charCodeAt(i));
-      }
-      commands.push(0x0A);
-    }
-    
-    // Store phone
-    if (receiptData.storeInfo?.phone) {
-      const phone = `Tel: ${receiptData.storeInfo.phone}`;
-      for (let i = 0; i < phone.length; i++) {
-        commands.push(phone.charCodeAt(i));
-      }
-      commands.push(0x0A);
-    }
-    
-    // Store TIN
-    if (receiptData.storeInfo?.tin) {
-      const tin = `TIN: ${receiptData.storeInfo.tin}`;
-      for (let i = 0; i < tin.length; i++) {
-        commands.push(tin.charCodeAt(i));
-      }
-      commands.push(0x0A);
-    }
-    
-    commands.push(0x0A);
-    
-    // Left align - ESC a 0
-    commands.push(0x1B, 0x61, 0x00);
-    
-    // Separator
-    const sep = '--------------------------------';
-    for (let i = 0; i < sep.length; i++) {
-      commands.push(sep.charCodeAt(i));
-    }
-    commands.push(0x0A);
-    
-    // Invoice
-    const inv = `Invoice: ${receiptData.invoiceNumber || 'N/A'}`;
-    for (let i = 0; i < inv.length; i++) {
-      commands.push(inv.charCodeAt(i));
-    }
-    commands.push(0x0A);
-    
-    // Date
-    const dt = `Date: ${receiptData.receiptDate || new Date().toLocaleString()}`;
-    for (let i = 0; i < dt.length; i++) {
-      commands.push(dt.charCodeAt(i));
-    }
-    commands.push(0x0A);
-    
-    // Cashier
-    if (receiptData.cashier || receiptData.user) {
-      const cash = `Cashier: ${receiptData.cashier || receiptData.user}`;
-      for (let i = 0; i < cash.length; i++) {
-        commands.push(cash.charCodeAt(i));
-      }
-      commands.push(0x0A);
-    }
-    
-    // Customer
-    if (receiptData.customer || receiptData.customerName) {
-      const cust = `Customer: ${receiptData.customer || receiptData.customerName}`;
-      for (let i = 0; i < cust.length; i++) {
-        commands.push(cust.charCodeAt(i));
-      }
-      commands.push(0x0A);
-    }
-    
-    // Separator
-    for (let i = 0; i < sep.length; i++) {
-      commands.push(sep.charCodeAt(i));
-    }
-    commands.push(0x0A);
-    
-    // Items header
-    const hdr = 'ITEM           QTY    PRICE';
-    for (let i = 0; i < hdr.length; i++) {
-      commands.push(hdr.charCodeAt(i));
-    }
-    commands.push(0x0A);
-    
-    for (let i = 0; i < sep.length; i++) {
-      commands.push(sep.charCodeAt(i));
-    }
-    commands.push(0x0A);
-    
-    // Items
-    if (receiptData.items && Array.isArray(receiptData.items)) {
-
-      for (const item of receiptData.items) {
-        let name = String(item.name || item.productName || 'Item');
-        if (name.length > 15) name = name.substring(0, 15);
-        else name = name.padEnd(15);
-        
-        const qty = String(item.quantity || item.qty || 1).padStart(4);
-        const price = String(Number(item.total || item.price || 0).toFixed(2)).padStart(8);
-        
-        const line = `${name} ${qty} ${price}`;
-        for (let i = 0; i < line.length; i++) {
-          commands.push(line.charCodeAt(i));
-        }
-        commands.push(0x0A);
-      }
-    }
-    
-    // Separator
-    for (let i = 0; i < sep.length; i++) {
-      commands.push(sep.charCodeAt(i));
-    }
-    commands.push(0x0A);
-    
-    // Subtotal
-    const subtotalVal = Number(receiptData.subtotal || receiptData.subTotal || 0).toFixed(2);
-    const subLine = `Subtotal:`.padEnd(24) + subtotalVal.padStart(8);
-    for (let i = 0; i < subLine.length; i++) {
-      commands.push(subLine.charCodeAt(i));
-    }
-    commands.push(0x0A);
-    
-    // Discount
-    if (receiptData.discount && Number(receiptData.discount) > 0) {
-      const discVal = Number(receiptData.discount).toFixed(2);
-      const discLine = `Discount:`.padEnd(24) + discVal.padStart(8);
-      for (let i = 0; i < discLine.length; i++) {
-        commands.push(discLine.charCodeAt(i));
-      }
-      commands.push(0x0A);
-    }
-    
-    // VAT
-    if (receiptData.vatAmount && Number(receiptData.vatAmount) > 0) {
-      const vatVal = Number(receiptData.vatAmount).toFixed(2);
-      const vatLine = `VAT:`.padEnd(24) + vatVal.padStart(8);
-      for (let i = 0; i < vatLine.length; i++) {
-        commands.push(vatLine.charCodeAt(i));
-      }
-      commands.push(0x0A);
-    }
-    
-    // Separator
-    for (let i = 0; i < sep.length; i++) {
-      commands.push(sep.charCodeAt(i));
-    }
-    commands.push(0x0A);
-    
-    // Total - Double size
-    commands.push(0x1D, 0x21, 0x11);
-    const totalVal = Number(receiptData.totalAmount || 0).toFixed(2);
-    const totLine = `TOTAL: ${totalVal}`;
-    for (let i = 0; i < totLine.length; i++) {
-      commands.push(totLine.charCodeAt(i));
-    }
-    commands.push(0x0A);
-    commands.push(0x1D, 0x21, 0x00); // Normal size
-    
-    // Separator
-    for (let i = 0; i < sep.length; i++) {
-      commands.push(sep.charCodeAt(i));
-    }
-    commands.push(0x0A);
-    
-    // Payment
-    const payMethod = receiptData.paymentMethod || receiptData.payment || 'Cash';
-    const payLine = `Payment: ${payMethod}`;
-    for (let i = 0; i < payLine.length; i++) {
-      commands.push(payLine.charCodeAt(i));
-    }
-    commands.push(0x0A);
-    
-    // Amount paid
-    if (receiptData.amountPaid || receiptData.paid) {
-      const paid = `Paid: ${Number(receiptData.amountPaid || receiptData.paid).toFixed(2)}`;
-      for (let i = 0; i < paid.length; i++) {
-        commands.push(paid.charCodeAt(i));
-      }
-      commands.push(0x0A);
-    }
-    
-    // Change
-    if (receiptData.change && Number(receiptData.change) > 0) {
-      const chg = `Change: ${Number(receiptData.change).toFixed(2)}`;
-      for (let i = 0; i < chg.length; i++) {
-        commands.push(chg.charCodeAt(i));
-      }
-      commands.push(0x0A);
-    }
-    
-    commands.push(0x0A, 0x0A);
-    
-    // Center align
-    commands.push(0x1B, 0x61, 0x01);
-    
-    // Thank you
-    const thanks = 'Thank you for your purchase!\nPlease come again.\n';
-    for (let i = 0; i < thanks.length; i++) {
-      commands.push(thanks.charCodeAt(i));
-    }
-    commands.push(0x0A);
-    
-    // Footer
-    if (receiptData.footer || receiptData.footerMessage) {
-      const footer = String(receiptData.footer || receiptData.footerMessage);
-      for (let i = 0; i < footer.length; i++) {
-        commands.push(footer.charCodeAt(i));
-      }
-      commands.push(0x0A);
-    }
-    
-    commands.push(0x0A, 0x0A, 0x0A);
-    
-    // Cut paper - GS V 0
-    commands.push(0x1D, 0x56, 0x00);
-
-    const result = new Uint8Array(commands);
-    console.log(`Γ£à Generated ${result.length} bytes of ESC/POS data`);
-    
+    const paperSize = receiptData?._paperSize || '58mm';
+    const paperConfig = this.getPaperSizeConfig(paperSize);
+    const escposCommands = generateESCPOSCommands(receiptData, paperConfig);
+    const encoder = new TextEncoder();
+    const result = encoder.encode(escposCommands);
+    console.log(`Γ£à Generated ${result.length} bytes of shared ESC/POS data`);
     return result;
   }
 
