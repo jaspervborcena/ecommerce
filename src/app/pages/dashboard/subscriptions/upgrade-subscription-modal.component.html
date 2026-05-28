@@ -93,14 +93,13 @@
     <!-- Footer -->
     <div class="modal-footer">
       <button class="btn-cancel" (click)="close()">Cancel</button>
-      <button 
-        *ngIf="couponIsFree() && promoValid()" 
-        class="btn-primary" 
-        type="button" 
-        (click)="activateFreeCoupon()" 
-        [disabled]="submitting()"
+      <button
+        class="btn-primary"
+        type="button"
+        (click)="handleMainAction()"
+        [disabled]="mainActionDisabled()"
       >
-        {{ submitting() ? 'Activating…' : 'Activate Free Subscription' }}
+        {{ mainActionLabel() }}
       </button>
     </div>
   </div>

@@ -327,8 +327,20 @@ import * as XLSX from 'xlsx';
       text-align: right;
     }
 
-    .products-table th:nth-child(9), /* Status */
+    .products-table th:nth-child(9), /* Tracked */
     .products-table td:nth-child(9) {
+      width: 80px;
+      text-align: center;
+    }
+
+    .products-table th:nth-child(10), /* VAT */
+    .products-table td:nth-child(10) {
+      width: 80px;
+      text-align: center;
+    }
+
+    .products-table th:nth-child(11), /* Status */
+    .products-table td:nth-child(11) {
       width: 90px;
       text-align: center;
     }
@@ -1302,6 +1314,7 @@ import * as XLSX from 'xlsx';
                 <th>Stock</th>
                 <th>Price</th>
                 <th>Tracked</th>
+                <th>VAT</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -1328,9 +1341,14 @@ import * as XLSX from 'xlsx';
                 </td>
                 <td class="product-stock-cell">{{ product.totalStock }}</td>
                 <td class="product-price-cell">{{ displayPrice(product).toFixed(2) }}</td>
-                <td class="product-tracked-cell" style="text-align: center;">
+                <td class="product-tracked-cell">
                   <span [style.color]="isProductTracked(product) ? '#10b981' : '#ef4444'" [style.font-weight]="'600'">
                     {{ isProductTracked(product) ? '✓' : '✗' }}
+                  </span>
+                </td>
+                <td class="product-vat-cell">
+                  <span [style.color]="product.isVatApplicable ? '#10b981' : '#ef4444'" [style.font-weight]="'600'">
+                    {{ product.isVatApplicable ? '✓' : '✗' }}
                   </span>
                 </td>
                 <td class="product-status-cell">
@@ -3380,17 +3398,41 @@ export class ProductManagementComponent implements OnInit {
                      currentUser?.permissions?.[0]?.storeId || '';
       
       // Validate SKU uniqueness for the current store
-      const skuId = formValue.skuId;
+      const normalizeText = (value: unknown): string => {
+        if (value === undefined || value === null) {
+          return '';
+        }
+        return String(value).trim();
+      };
+
+      const skuId = normalizeText(formValue.skuId);
       if (skuId) {
         const allProducts = this.productService.products();
         const duplicateSku = allProducts.find(p => 
-          p.skuId === skuId && 
+          normalizeText(p.skuId) === skuId && 
           p.storeId === storeId && 
           (!this.isEditMode || p.id !== this.selectedProduct?.id) // Exclude current product in edit mode
         );
         
         if (duplicateSku) {
           this.toastService.error(`Cannot save: SKU "${skuId}" already exists in product "${duplicateSku.productName}". Each product must have a unique SKU for this store.`);
+          this.loading = false;
+          return;
+        }
+      }
+
+      // Validate barcode uniqueness for the current store
+      const barcodeId = normalizeText(formValue.barcodeId);
+      if (barcodeId) {
+        const allProducts = this.productService.products();
+        const duplicateBarcode = allProducts.find(p => 
+          normalizeText(p.barcodeId) === barcodeId && 
+          p.storeId === storeId && 
+          (!this.isEditMode || p.id !== this.selectedProduct?.id)
+        );
+
+        if (duplicateBarcode) {
+          this.toastService.error(`Cannot save: Barcode "${barcodeId}" already exists in product "${duplicateBarcode.productName}". Each product must have a unique barcode for this store.`);
           this.loading = false;
           return;
         }
@@ -3659,7 +3701,7 @@ export class ProductManagementComponent implements OnInit {
     } catch (error) {
       console.error('Error saving product:', error);
       
-      // Log the error
+      const errorMessage = error instanceof Error ? error.message : String(error || 'Unknown error');
       const errorPermission = this.authService.getCurrentPermission();
       const errorStoreId = errorPermission?.storeId || '';
       const action = this.isEditMode ? 'UPDATE' : 'CREATE';
@@ -3668,11 +3710,30 @@ export class ProductManagementComponent implements OnInit {
       console.error('Product error:', {
         productId: this.selectedProduct?.id || 'new-product',
         action,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
         storeId: errorStoreId
       });
-      
-      this.toastService.error('Error saving product. Please try again.');
+
+      let toastMessage = 'Error saving product. Please try again.';
+      if (/barcode.*(duplicate|exists|already exists|taken|conflict)/i.test(errorMessage)) {
+        toastMessage = 'Cannot save product because of a duplicate barcode. Please change the barcode and try again.';
+      } else if (/sku.*(duplicate|exists|already exists|taken|conflict)/i.test(errorMessage)) {
+        toastMessage = 'Cannot save product because of a duplicate SKU. Please change the SKU and try again.';
+      } else if (/trim is not a function/i.test(errorMessage) && /barcode/i.test(errorMessage)) {
+        toastMessage = 'Cannot save product because of an invalid barcode value. Please check the barcode field and try again.';
+      } else if (/trim is not a function/i.test(errorMessage) && /sku/i.test(errorMessage)) {
+        toastMessage = 'Cannot save product because of an invalid SKU value. Please check the SKU field and try again.';
+      } else if (/multiple tags selected|tag.*selected|tag.*duplicate|duplicate.*tag|tag.*invalid/i.test(errorMessage)) {
+        toastMessage = 'Cannot save product because of tag selection. Please fix the tags and try again.';
+      } else if (/category.*(duplicate|exists|already exists|invalid)/i.test(errorMessage)) {
+        toastMessage = 'Cannot save product because of category. Please fix the category and try again.';
+      } else if (/company id|store id|permission/i.test(errorMessage)) {
+        toastMessage = 'Cannot save product because of store or permission settings. Please check store selection and user permissions.';
+      } else if (errorMessage && !/unknown error/i.test(errorMessage)) {
+        toastMessage = `Error saving product: ${errorMessage}. Please try again.`;
+      }
+
+      this.toastService.error(toastMessage);
     } finally {
       this.loading = false;
     }
@@ -4255,7 +4316,7 @@ export class ProductManagementComponent implements OnInit {
       }
     }
 
-  duplicateProduct(product: Product): void {
+  async duplicateProduct(product: Product): Promise<void> {
     this.isEditMode = false;
     this.selectedProduct = null;
     
@@ -4281,6 +4342,16 @@ export class ProductManagementComponent implements OnInit {
     // Remove only tags and system fields from duplicateData, keep everything else including SKU and prices
     const { tags, tagLabels, id, createdAt, updatedAt, ...dataWithoutExcludedFields } = duplicateData;
     this.productForm.patchValue(dataWithoutExcludedFields, { emitEvent: false });
+
+    // Load store-specific categories and tags when duplicating
+    const duplicateStoreId = duplicateData.storeId || '';
+    if (duplicateStoreId) {
+      await this.categoryService.loadCategoriesByStore(duplicateStoreId);
+      await this.loadTags(duplicateStoreId);
+    } else {
+      this.availableTags.set([]);
+      this.tagGroups.set([]);
+    }
     
     // Ensure defaults are set
     this.productForm.patchValue({
