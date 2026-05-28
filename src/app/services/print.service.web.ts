@@ -1248,7 +1248,6 @@ ${branchName ? `        <div class="bold">Branch</div>\n        <div>${branchNam
       <div class="footer-section no-break">
         <div>Thank you for your purchase!</div>
         <div>Please come again.</div>
-        <div>This document is not valid for claim of input tax.</div>
         <br>
         <div style="margin-top: 10px;">&nbsp;</div>
       </div>

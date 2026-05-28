@@ -4,6 +4,35 @@ All notable changes to this project are documented in this file.
 
 ---
 
+## [1.0.2] — 2026-05-28
+
+### Overview
+Version 1.0.2 is a receipt formatting and build optimization release. Improvements focus on cleaner receipt presentation, removal of currency symbols for flexibility, and a fresh Android APK build with updated dependencies.
+
+### Changes in this Release
+
+#### Receipt Formatting Improvements
+- **Removed currency symbol (₱)** from all receipt amounts — provides flexibility for regional customization and cleaner numeric display
+- **Fixed duplicate validity notice** — "This document is not valid for claim of input tax" now appears only in the validity notice section, not duplicated in the footer
+- Cleaned up receipt HTML template in `print.service.web.ts` for improved maintainability
+
+#### Android APK Build
+- **Removed old android folder** — fresh rebuild ensures clean Capacitor integration
+- **Built fresh production APK** — Output: `android/app/build/outputs/apk/release/app-release-unsigned.apk` (4.52 MB)
+- **Updated Capacitor configuration** — All plugins synced with latest versions:
+  - @capacitor-community/bluetooth-le@6.1.0
+  - @capacitor/app@6.0.3
+  - @capacitor/splash-screen@6.0.4
+  - @capacitor/status-bar@6.0.3
+
+### Version Info
+- **App Version**: 1.0.2
+- **Angular**: 19.1.0
+- **Capacitor**: 6.2.0
+- **Build Date**: May 28, 2026
+
+---
+
 ## [1.0.1] — 2026-04-08
 
 ### Overview
