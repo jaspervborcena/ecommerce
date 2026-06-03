@@ -3703,32 +3703,68 @@ export class PosComponent implements OnInit, AfterViewInit, OnDestroy {
         return false;
       }
 
-      // Expiry check using denormalized end date (normalize various shapes)
+      // Expiry check: normalize denormalized store field and also fetch subscription docs
       const rawEndDate = store.subscriptionEndDate as any;
-      let endDate: Date | null | undefined = toDateValue(rawEndDate) ?? undefined;
+      let storeEndDate: Date | undefined = toDateValue(rawEndDate) ?? undefined;
 
-      // If raw value is a string (ISO) and toDateValue returned null, attempt Date conversion
-      if (!endDate && typeof rawEndDate === 'string') {
+      // Normalize string shapes
+      if (!storeEndDate && typeof rawEndDate === 'string') {
         const parsed = new Date(rawEndDate);
-        if (!isNaN(parsed.getTime())) endDate = parsed;
+        if (!isNaN(parsed.getTime())) storeEndDate = parsed;
       }
 
-      // If still missing, try to fetch the latest subscription
-      if (!endDate && store.companyId && store.id) {
-        try {
+      // Fetch latest subscription documents (store-first, then company) and prefer their end dates
+      let latestStoreSubEnd: Date | undefined;
+      let latestCompanySubEnd: Date | undefined;
+      try {
+        if (store.companyId && store.id) {
           const latest = await this.subscriptionService.getSubscriptionForStore(store.companyId, store.id);
-          endDate = toDateValue(latest?.data?.endDate) ?? (latest?.data?.endDate instanceof Date ? latest.data.endDate : (latest?.data?.endDate ? new Date(latest.data.endDate) : undefined));
-        } catch (e) {
-          // ignore fetch errors; treat as unknown
+          latestStoreSubEnd = toDateValue(latest?.data?.endDate) ?? undefined;
         }
+      } catch (e) {
+        console.warn('Failed to fetch store subscription doc:', e);
       }
 
+      try {
+        if (store.companyId && !latestStoreSubEnd) {
+          const latestCompany = await this.subscriptionService.getLatestSubscriptionForCompany(store.companyId);
+          latestCompanySubEnd = toDateValue(latestCompany?.data?.endDate) ?? undefined;
+        }
+      } catch (e) {
+        console.warn('Failed to fetch company subscription doc:', e);
+      }
+
+      // Decide which end date to use (prefer subscription docs over store cache)
+      let chosenEndDate: Date | undefined = undefined;
+      if (latestStoreSubEnd) chosenEndDate = latestStoreSubEnd;
+      else if (latestCompanySubEnd) chosenEndDate = latestCompanySubEnd;
+      else if (storeEndDate) chosenEndDate = storeEndDate;
+
+      // Auto-sync store if subscription doc has a newer date than cache
+      let latestForSync: Date | undefined;
+      try {
+        latestForSync = latestStoreSubEnd || latestCompanySubEnd;
+        if (latestForSync && store.id) {
+          const currentStoreDate = storeEndDate;
+          if (!currentStoreDate || latestForSync.getTime() > currentStoreDate.getTime()) {
+            console.log('🔁 Auto-syncing store.subscriptionEndDate from subscription doc', { storeId: store.id, before: currentStoreDate?.toISOString() ?? null, after: latestForSync.toISOString() });
+            try { await this.storeService.updateStore(store.id, { subscriptionEndDate: latestForSync }); console.log('✅ Store subscriptionEndDate synced'); } catch (e) { console.warn('Sync failed:', e); }
+          }
+        }
+      } catch (e) {
+        console.warn('Subscription auto-sync check failed:', e);
+      }
+
+      const endDate = chosenEndDate;
       const now = new Date();
       if (!endDate || endDate.getTime() < now.getTime()) {
         const when = endDate instanceof Date ? endDate.toLocaleDateString() : 'unavailable';
+        const storeRaw = rawEndDate ? (toDateValue(rawEndDate) ? toDateValue(rawEndDate)!.toLocaleDateString() : String(rawEndDate)) : 'none';
+        const latestRaw = latestForSync instanceof Date ? latestForSync.toLocaleDateString() : (latestForSync ? String(latestForSync) : 'none');
+        console.warn('Subscription gate failed - values:', { storeRaw, latestRaw, resolvedEnd: when });
         await this.showConfirmationDialog({
           title: 'Subscription Required',
-          message: `Unable to create new order due to subscription expiration (expiry: ${when}). Please renew or upgrade your subscription to continue.`,
+          message: `Unable to create new order due to subscription expiration (expiry: ${when}).\n\nStore cache end date: ${storeRaw}\nLatest subscription end date: ${latestRaw}\n\nPlease renew or upgrade your subscription to continue.`,
           confirmText: 'OK',
           cancelText: '',
           type: 'warning'

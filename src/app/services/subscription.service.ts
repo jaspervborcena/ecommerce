@@ -222,6 +222,42 @@ export class SubscriptionService {
     return { id: d.id, data: sub };
   }
 
+  /** Get the latest subscription for a company (fallback when store-specific subscription not found) */
+  async getLatestSubscriptionForCompany(companyId: string): Promise<{ id: string; data: SubDoc } | null> {
+    const colRef = collection(this.firestore, this.collectionName);
+    const qRef = query(colRef, where('companyId', '==', companyId), orderBy('endDate', 'desc'), limit(1));
+    const snap = await getDocs(qRef);
+    if (snap.empty) return null;
+    const d = snap.docs[0];
+    const raw = d.data() as any;
+    const toDate = (v: any) => v?.toDate?.() || v || null;
+    const sub: SubDoc = {
+      id: d.id,
+      subscriptionId: raw.subscriptionId,
+      companyId: raw.companyId,
+      storeId: raw.storeId,
+      uid: raw.uid,
+      planType: raw.planType,
+      status: raw.status,
+      startDate: toDate(raw.startDate),
+      endDate: toDate(raw.endDate),
+      trialStart: toDate(raw.trialStart),
+      trialDays: raw.trialDays,
+      isTrial: raw.isTrial,
+      promoCode: raw.promoCode ?? null,
+      referralCode: raw.referralCode ?? null,
+      paymentMethod: raw.paymentMethod,
+      paymentReference: raw.paymentReference,
+      amountPaid: raw.amountPaid,
+      currency: raw.currency,
+      paymentReceiptUrl: raw.paymentReceiptUrl,
+      features: raw.features as SubscriptionFeatures,
+      createdAt: toDate(raw.createdAt),
+      updatedAt: toDate(raw.updatedAt),
+    };
+    return { id: d.id, data: sub };
+  }
+
   /** Upload a payment receipt screenshot to Firebase Storage and return the URL */
   async uploadPaymentReceipt(file: File, params: { companyId: string; storeId: string; subscriptionId: string; paymentMethod: 'gcash' | 'paymaya' | string }): Promise<string> {
     const storage = getStorage(app); // Use environment-configured Firebase app
