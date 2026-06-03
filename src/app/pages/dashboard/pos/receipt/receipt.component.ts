@@ -1,6 +1,9 @@
-import { Component, Input, Output, EventEmitter, OnInit, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, ViewChild, ElementRef, AfterViewChecked, inject } from '@angular/core';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { PrintServiceWeb } from '../../../../services/print.service.web';
+import { generateReceiptPreviewText, generateESCPOSCommands } from '../../../../services/escpos-utils';
 
 @Component({
   selector: 'app-receipt',
@@ -61,6 +64,12 @@ export class ReceiptComponent implements OnInit {
   @Output() printReceipt = new EventEmitter<void>(); // Simplified - no printer type needed
 
   isPrinting: boolean = false;
+  printerPreviewText: string = '';
+  escposCommands: string = '';
+  private previewLineChars: number = 32;
+
+  private printService = inject(PrintServiceWeb);
+  private sanitizer = inject(DomSanitizer);
 
   ngOnInit() {
   }
@@ -75,9 +84,129 @@ export class ReceiptComponent implements OnInit {
       this.hasFocusedPrint = true;
     }
 
+    if (this.isVisible && !this.printerPreviewText) {
+      this.generatePrinterPreview();
+    }
+
     if (!this.isVisible) {
       this.hasFocusedPrint = false;
+      this.printerPreviewText = '';
     }
+  }
+
+  private generatePrinterPreview(): void {
+    try {
+      const paperConfig = this.printService.getPaperSizeConfig();
+      this.previewLineChars = paperConfig.lineChars;
+      this.printerPreviewText = generateReceiptPreviewText(this.receiptData || {}, paperConfig);
+      this.escposCommands = generateESCPOSCommands(this.receiptData || {}, paperConfig);
+    } catch (error) {
+      console.error('Error generating printer preview:', error);
+      this.printerPreviewText = 'Error generating printer preview';
+      this.escposCommands = 'Error generating ESC/POS commands';
+    }
+  }
+
+  formatPrinterPreview(): string {
+    const cleaned = this.printerPreviewText.replace(/ù/g, '').replace(/\r/g, '');
+    return this.wrapPreviewText(cleaned, this.previewLineChars);
+  }
+
+  formatPrinterPreviewHtml(): SafeHtml {
+    const cleaned = (this.printerPreviewText || '').replace(/ù/g, '').replace(/\r/g, '');
+    const wrapped = this.wrapPreviewText(cleaned, this.previewLineChars);
+    const lines = wrapped.split('\n');
+    const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const firstNonEmpty = lines.findIndex(l => l.trim().length > 0);
+
+    const rightAlignedKeys = ['Vatable Sales:', 'Subtotal:', 'VAT Amount:', 'VAT Exempt:', 'Discount:', 'Net Amount:', 'TOTAL:'];
+
+    const boldKeywords = [
+      'Invoice #', 'Sales Invoice', 'SALES INVOICE', 'Payment:', 'SOLD TO:', 'Cashier:', 'Date:',
+      'Product', 'Qty', 'Amount', 'Total'
+    ];
+
+    const looksLikeItemLine = (ln: string) => {
+      // item lines contain a currency symbol and a numeric total at the end
+      return /₱\d+\.\d{2}$/.test(ln.trim()) || /\d+\.\d{2}$/.test(ln.trim());
+    };
+
+    const rightAlignHtml = (label: string) => {
+      const escaped = escape(label);
+      const padCount = Math.max(0, this.previewLineChars - label.length);
+      const padding = '&nbsp;'.repeat(padCount);
+      return `<b>${padding}${escaped}</b>`;
+    };
+
+    const htmlLines = lines.map((ln, idx) => {
+      const raw = ln;
+      const trimmed = raw.trim();
+      if (trimmed.length === 0) return escape(raw);
+
+      // Right-align totals and similar lines in the right pane
+      for (const rk of rightAlignedKeys) {
+        if (trimmed.startsWith(rk)) {
+          return rightAlignHtml(trimmed);
+        }
+      }
+
+      // Bold first non-empty line (store name)
+      if (idx === firstNonEmpty) return `<b>${escape(raw)}</b>`;
+
+      // Bold branch line if it starts with 'Branch:'
+      if (trimmed.startsWith('Branch:')) return `<b>${escape(raw)}</b>`;
+
+      // Bold if contains any of the keywords
+      for (const kw of boldKeywords) {
+        if (raw.indexOf(kw) !== -1) return `<b>${escape(raw)}</b>`;
+      }
+
+      // Bold item first lines (contain currency at end)
+      if (looksLikeItemLine(raw)) return `<b>${escape(raw)}</b>`;
+
+      return escape(raw);
+    });
+    const html = htmlLines.join('\n');
+    return this.sanitizer.bypassSecurityTrustHtml(html);
+  }
+
+  private wrapPreviewText(text: string, width: number): string {
+    return text
+      .split('\n')
+      .map(line => this.wrapLine(line, width))
+      .flat()
+      .join('\n');
+  }
+
+  private wrapLine(line: string, width: number): string[] {
+    const trimmed = line.replace(/[\t]/g, '    ');
+    if (trimmed.length <= width) {
+      return [trimmed];
+    }
+
+    const words = trimmed.split(' ');
+    const lines: string[] = [];
+    let current = '';
+
+    for (const word of words) {
+      if (!current) {
+        current = word;
+        continue;
+      }
+
+      if ((current + ' ' + word).length <= width) {
+        current += ' ' + word;
+      } else {
+        lines.push(current);
+        current = word;
+      }
+    }
+
+    if (current) {
+      lines.push(current);
+    }
+
+    return lines;
   }
 
   onCloseModal() {
