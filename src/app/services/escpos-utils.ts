@@ -195,8 +195,7 @@ export function generateESCPOSCommands(receiptData: any, paperConfig: PaperSizeC
   if (receiptData?.items) {
     receiptData.items.forEach((item: any) => {
       const qty = (item.quantity || 1).toString();
-      const unitType = item.unitType && item.unitType !== 'N/A' ? ` ${item.unitType.substring(0, 2)}(s)` : ' pc(s)';
-      const qtyLabel = sanitizeText(`${qty}${unitType}`);
+      const qtyLabel = sanitizeText(qty);
       const total = (item.total || 0).toFixed(2);
       const unitPrice = (item.sellingPrice || item.price || 0).toFixed(2);
       const productName = sanitizeText(item.productName || item.name || 'Item');
@@ -204,7 +203,7 @@ export function generateESCPOSCommands(receiptData: any, paperConfig: PaperSizeC
 
       // First product line with quantity, amount, and total
       commands += '\x1B\x45\x01';
-      commands += padRight(wrappedProductLines[0], productColWidth) + ' ' + padRight(qtyLabel, qtyColWidth) + ' ' + padRight(`₱${unitPrice}`, amountColWidth) + ' ' + padLeft(`₱${total}`, totalColWidth) + '\n';
+      commands += padRight(wrappedProductLines[0], productColWidth) + ' ' + padLeft(qtyLabel, qtyColWidth) + ' ' + padLeft(`₱${unitPrice}`, amountColWidth) + ' ' + padLeft(`₱${total}`, totalColWidth) + '\n';
       commands += '\x1B\x45\x00';
 
       for (let i = 1; i < wrappedProductLines.length; i++) {
