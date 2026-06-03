@@ -46,9 +46,63 @@ export function generateESCPOSCommands(receiptData: any, paperConfig: PaperSizeC
     // Remove non-ASCII characters so the printer only receives safe bytes
     s = s.replace(/[^\x00-\x7F]/g, '');
     // Remove control characters except LF (\n) and CR (\r)
-    s = s.replace(/[\x00-\x09\x0B\x0C\x0E-\x1F]/g, '');
+    s = s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
     // Trim leading/trailing whitespace
     return s.trim();
+  };
+
+  const wrapText = (text: string, width: number): string[] => {
+    const sanitized = sanitizeText(text);
+    if (!sanitized) return [''];
+
+    const words = sanitized.split(' ');
+    const lines: string[] = [];
+    let current = '';
+
+    for (const word of words) {
+      if (word.length > width) {
+        if (current) {
+          lines.push(current);
+          current = '';
+        }
+        let idx = 0;
+        while (idx < word.length) {
+          lines.push(word.substring(idx, idx + width));
+          idx += width;
+        }
+        continue;
+      }
+
+      if (!current) {
+        current = word;
+      } else if ((current.length + 1 + word.length) <= width) {
+        current += ' ' + word;
+      } else {
+        lines.push(current);
+        current = word;
+      }
+    }
+
+    if (current) lines.push(current);
+    return lines;
+  };
+
+  const padRight = (text: string, width: number) => {
+    const sanitized = sanitizeText(text);
+    return sanitized.length >= width ? sanitized.substring(0, width) : sanitized + ' '.repeat(width - sanitized.length);
+  };
+
+  const padLeft = (text: string, width: number) => {
+    const sanitized = sanitizeText(text);
+    return sanitized.length >= width ? sanitized.substring(0, width) : ' '.repeat(width - sanitized.length) + sanitized;
+  };
+
+  const centerText = (text: string) => {
+    const sanitized = sanitizeText(text);
+    if (!sanitized) return '';
+    if (sanitized.length >= lineChars) return sanitized;
+    const padding = Math.floor((lineChars - sanitized.length) / 2);
+    return ' '.repeat(padding) + sanitized;
   };
 
 
@@ -129,11 +183,11 @@ export function generateESCPOSCommands(receiptData: any, paperConfig: PaperSizeC
   
   // Items header - BOLD and clearer (adapt to paper width)
   commands += '\x1B\x45\x01'; // Bold on
-  // Dynamic header based on paper size
-  const qtyColWidth = 4;
+  const qtyColWidth = 8;
+  const amountColWidth = 10;
   const totalColWidth = 10;
-  const productColWidth = lineChars - qtyColWidth - totalColWidth - 2; // -2 for spaces
-  const itemsHeader = 'Qty'.padEnd(qtyColWidth) + 'Product Name'.padEnd(productColWidth) + 'Total'.padStart(totalColWidth);
+  const productColWidth = lineChars - qtyColWidth - amountColWidth - totalColWidth - 3;
+  const itemsHeader = 'Product'.padEnd(productColWidth) + ' ' + 'Qty'.padEnd(qtyColWidth) + ' ' + 'Amount'.padEnd(amountColWidth) + ' ' + 'Total'.padStart(totalColWidth);
   commands += itemsHeader + '\n';
   commands += '\x1B\x45\x00'; // Bold off
   commands += separatorLine;
@@ -141,32 +195,26 @@ export function generateESCPOSCommands(receiptData: any, paperConfig: PaperSizeC
   if (receiptData?.items) {
     receiptData.items.forEach((item: any) => {
       const qty = (item.quantity || 1).toString();
-      const unitType = item.unitType && item.unitType !== 'N/A' ? ` ${item.unitType.substring(0, 2)}` : '';
+      const unitType = item.unitType && item.unitType !== 'N/A' ? ` ${item.unitType.substring(0, 2)}(s)` : ' pc(s)';
+      const qtyLabel = sanitizeText(`${qty}${unitType}`);
       const total = (item.total || 0).toFixed(2);
-      
-      // Dynamic formatting based on paper width
-      const qtyWithUnit = `${qty}${unitType}`;
-      const qtyPadded = qtyWithUnit.padEnd(qtyColWidth);
-      
-      // Product name - limited to fit paper width
-      const maxProductNameLength = productColWidth - 1;
-      const productName = sanitizeText(item.productName || item.name || 'Item').substring(0, maxProductNameLength);
-      const productPadded = productName.padEnd(maxProductNameLength);
-      
-      // Total - right aligned
-      const totalPadded = total.padStart(totalColWidth);
-      
-      // Make item lines slightly bolder
-      commands += '\x1B\x45\x01'; // Bold on for item
-      commands += `${qtyPadded} ${productPadded} ${totalPadded}\n`;
-      commands += '\x1B\x45\x00'; // Bold off
-
-      // SKU on separate indented line (show SKU after product name)
-      const skuLine = `    SKU: ${sanitizeText(item.skuId || item.productId || '')}`;
-      commands += `${skuLine}\n`;
-
-      // Unit price on separate line, indented
       const unitPrice = (item.sellingPrice || item.price || 0).toFixed(2);
+      const productName = sanitizeText(item.productName || item.name || 'Item');
+      const wrappedProductLines = wrapText(productName, productColWidth);
+
+      // First product line with quantity, amount, and total
+      commands += '\x1B\x45\x01';
+      commands += padRight(wrappedProductLines[0], productColWidth) + ' ' + padRight(qtyLabel, qtyColWidth) + ' ' + padRight(`₱${unitPrice}`, amountColWidth) + ' ' + padLeft(`₱${total}`, totalColWidth) + '\n';
+      commands += '\x1B\x45\x00';
+
+      for (let i = 1; i < wrappedProductLines.length; i++) {
+        commands += padRight(wrappedProductLines[i], productColWidth) + ' ' + ' '.repeat(qtyColWidth) + ' ' + ' '.repeat(amountColWidth) + ' ' + ' '.repeat(totalColWidth) + '\n';
+      }
+
+      const skuText = sanitizeText(item.skuId || item.productId || '');
+      if (skuText) {
+        commands += `    SKU: ${skuText}\n`;
+      }
       commands += `    @ ${unitPrice} each\n`;
     });
   }
@@ -175,38 +223,46 @@ export function generateESCPOSCommands(receiptData: any, paperConfig: PaperSizeC
   
   // Totals - Right aligned with dynamic width and BOLD amounts
   const receiptWidth = lineChars; // Use dynamic width based on paper size
-  
-  // Subtotal - always show (BOLD)
-  commands += '\x1B\x45\x01'; // Bold on
-  const subtotalAmt = (receiptData?.subtotal || 0).toFixed(2);
-  const subtotalLine = `Subtotal: ${subtotalAmt}`;
-  const subtotalSpaces = ' '.repeat(receiptWidth - subtotalLine.length);
-  commands += `${subtotalSpaces}${subtotalLine}\n`;
-  commands += '\x1B\x45\x00'; // Bold off
-  
-  // VAT (12%) - always show (BOLD)
-  commands += '\x1B\x45\x01'; // Bold on
-  const vatAmt = (receiptData?.vatAmount || 0).toFixed(2);
-  const vatLine = `VAT (12%): ${vatAmt}`;
-  const vatSpaces = ' '.repeat(receiptWidth - vatLine.length);
-  commands += `${vatSpaces}${vatLine}\n`;
-  commands += '\x1B\x45\x00'; // Bold off
-  
-  // VAT Exempt - always show (BOLD)
-  commands += '\x1B\x45\x01'; // Bold on
-  const vatExemptAmt = (receiptData?.vatExempt || 0).toFixed(2);
-  const vatExemptLine = `VAT Exempt: ${vatExemptAmt}`;
-  const vatExemptSpaces = ' '.repeat(Math.max(0, receiptWidth - vatExemptLine.length));
-  commands += `${vatExemptSpaces}${vatExemptLine}\n`;
-  commands += '\x1B\x45\x00'; // Bold off
-  
-  // Discount - always show (BOLD)
-  commands += '\x1B\x45\x01'; // Bold on
-  const discountAmt2 = (receiptData?.discount || 0).toFixed(2);
-  const discountLine = `Discount: ${discountAmt2}`;
-  const discountSpaces = ' '.repeat(Math.max(0, receiptWidth - discountLine.length));
-  commands += `${discountSpaces}${discountLine}\n`;
-  commands += '\x1B\x45\x00'; // Bold off
+  const vatableSalesAmt = Number(receiptData?.vatableSales || 0).toFixed(2);
+  const subtotalAmt = Number(receiptData?.subtotal || 0).toFixed(2);
+  const vatAmt = Number(receiptData?.vatAmount || 0).toFixed(2);
+  const vatExemptAmt = Number((receiptData?.vatExempt ?? receiptData?.vatExemptAmount) || 0).toFixed(2);
+  const discountAmt2 = Number(receiptData?.discount || 0).toFixed(2);
+
+  if (Number(vatableSalesAmt) > 0) {
+    commands += '\x1B\x45\x01'; // Bold on
+    const subtotalLine = `Vatable Sales: ${vatableSalesAmt}`;
+    const subtotalSpaces = ' '.repeat(Math.max(0, receiptWidth - subtotalLine.length));
+    commands += `${subtotalSpaces}${subtotalLine}\n`;
+    commands += '\x1B\x45\x00'; // Bold off
+  } else if (Number(subtotalAmt) > 0) {
+    commands += '\x1B\x45\x01'; // Bold on
+    const subtotalLine = `Subtotal: ${subtotalAmt}`;
+    const subtotalSpaces = ' '.repeat(Math.max(0, receiptWidth - subtotalLine.length));
+    commands += `${subtotalSpaces}${subtotalLine}\n`;
+    commands += '\x1B\x45\x00'; // Bold off
+  }
+  if (Number(vatAmt) > 0) {
+    commands += '\x1B\x45\x01'; // Bold on
+    const vatLine = `VAT Amount: ${vatAmt}`;
+    const vatSpaces = ' '.repeat(Math.max(0, receiptWidth - vatLine.length));
+    commands += `${vatSpaces}${vatLine}\n`;
+    commands += '\x1B\x45\x00'; // Bold off
+  }
+  if (Number(vatExemptAmt) > 0) {
+    commands += '\x1B\x45\x01'; // Bold on
+    const vatExemptLine = `VAT Exempt: ${vatExemptAmt}`;
+    const vatExemptSpaces = ' '.repeat(Math.max(0, receiptWidth - vatExemptLine.length));
+    commands += `${vatExemptSpaces}${vatExemptLine}\n`;
+    commands += '\x1B\x45\x00'; // Bold off
+  }
+  if (Number(discountAmt2) > 0) {
+    commands += '\x1B\x45\x01'; // Bold on
+    const discountLine = `Discount: ${discountAmt2}`;
+    const discountSpaces = ' '.repeat(Math.max(0, receiptWidth - discountLine.length));
+    commands += `${discountSpaces}${discountLine}\n`;
+    commands += '\x1B\x45\x00'; // Bold off
+  }
   
   commands += doubleSeparatorLine;
   // Total - DOUBLE SIZE and BOLD
@@ -278,6 +334,190 @@ export function generateESCPOSCommands(receiptData: any, paperConfig: PaperSizeC
   commands += '\x1B\x70\x00\x19\xF9'; // Open cash drawer (pin 2, activation)
   
   return commands;
+}
+
+export function generateReceiptPreviewText(receiptData: any, paperConfig: PaperSizeConfig): string {
+  const lineChars = paperConfig.lineChars;
+
+  const sanitizeText = (input: any) => {
+    if (input === null || input === undefined) return '';
+    let s = String(input);
+    s = s.replace(/\u2018|\u2019|\u201A|\u201B/g, "'")
+         .replace(/\u201C|\u201D|\u201E/g, '"')
+         .replace(/\u2013|\u2014/g, '-')
+         .replace(/\u2026/g, '...')
+         .replace(/\u02C6/g, '^');
+    try { s = s.normalize('NFKD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {}
+    s = s.replace(/[^\x00-\x7F]/g, '');
+    s = s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+    return s.trim();
+  };
+
+  const wrapText = (text: string, width: number): string[] => {
+    const sanitized = sanitizeText(text);
+    if (!sanitized) return [''];
+    const words = sanitized.split(' ');
+    const lines: string[] = [];
+    let current = '';
+
+    for (const word of words) {
+      if (word.length > width) {
+        if (current) {
+          lines.push(current);
+          current = '';
+        }
+        let idx = 0;
+        while (idx < word.length) {
+          lines.push(word.substring(idx, idx + width));
+          idx += width;
+        }
+        continue;
+      }
+      if (!current) {
+        current = word;
+      } else if ((current.length + 1 + word.length) <= width) {
+        current += ' ' + word;
+      } else {
+        lines.push(current);
+        current = word;
+      }
+    }
+    if (current) lines.push(current);
+    return lines;
+  };
+
+  const centerLine = (text: string) => {
+    const sanitized = sanitizeText(text);
+    if (!sanitized) return '';
+    if (sanitized.length >= lineChars) return sanitized;
+    const padding = Math.ceil((lineChars - sanitized.length) / 2);
+    return ' '.repeat(padding) + sanitized;
+  };
+
+  const padRight = (text: string, width: number) => {
+    const sanitized = sanitizeText(text);
+    return sanitized.length >= width ? sanitized.substring(0, width) : sanitized + ' '.repeat(width - sanitized.length);
+  };
+
+  const padLeft = (text: string, width: number) => {
+    const sanitized = sanitizeText(text);
+    return sanitized.length >= width ? sanitized.substring(0, width) : ' '.repeat(width - sanitized.length) + sanitized;
+  };
+
+  const separatorLine = '-'.repeat(lineChars);
+  const doubleSeparatorLine = '='.repeat(lineChars);
+
+  const storeName = sanitizeText(receiptData?.storeInfo?.storeName || 'Store Name');
+  const branch = sanitizeText(receiptData?.storeInfo?.branchName || '');
+  const address = sanitizeText(receiptData?.storeInfo?.address || '');
+  const phone = sanitizeText(receiptData?.storeInfo?.phone || 'N/A');
+  const email = sanitizeText(receiptData?.storeInfo?.email || 'N/A');
+  const invoiceNumber = sanitizeText(receiptData?.invoiceNumber || 'Auto-generated');
+  const invoiceType = sanitizeText(receiptData?.storeInfo?.invoiceType || 'Sales Invoice');
+  const cashier = sanitizeText(receiptData?.cashier || 'N/A');
+  const dateString = `${new Date(receiptData?.receiptDate || new Date()).toLocaleDateString()} ${new Date(receiptData?.receiptDate || new Date()).toLocaleTimeString()}`;
+  const customerName = sanitizeText(receiptData?.customerName && receiptData.customerName !== 'N/A' ? receiptData.customerName : 'Walk-in Customer');
+
+  const isCashSale = receiptData?.isCashSale !== false;
+  const paymentMethod = isCashSale ? 'Cash' : (receiptData?.isChargeSale ? 'Charge' : 'N/A');
+
+  let output = '';
+
+  output += centerLine(storeName) + '\n';
+  if (branch) output += centerLine(`Branch: ${branch}`) + '\n';
+
+  if (address) {
+    wrapText(address, lineChars).forEach(line => {
+      output += centerLine(line) + '\n';
+    });
+  }
+
+  const contactLine = `Tel: ${phone}${email ? ' | Email: ' + email : ''}`;
+  wrapText(contactLine, lineChars).forEach(line => {
+    output += centerLine(line) + '\n';
+  });
+  // add one blank line after contact/email to separate from invoice
+  output += '\n';
+
+  output += centerLine(`Invoice #: ${invoiceNumber}`) + '\n';
+
+  output += centerLine(invoiceType) + '\n';
+  // ensure one blank line between invoice type and payment
+  output += '\n';
+
+  output += `Payment: ${paymentMethod}` + '\n';
+
+  output += `SOLD TO: ${customerName}` + '\n';
+
+  output += `Cashier: ${cashier}` + '\n';
+  output += `Date: ${dateString}` + '\n';
+
+  const qtyColWidth = 3;
+  const amountColWidth = 8;
+  const totalColWidth = 8;
+  const productColWidth = lineChars - qtyColWidth - amountColWidth - totalColWidth - 3;
+
+  const headerQty = padLeft('Qty', qtyColWidth);
+  const headerAmount = padLeft('Amount', amountColWidth);
+  const headerTotal = padLeft('Total', totalColWidth);
+
+  output += padRight('Product', productColWidth) + ' ' + headerQty + ' ' + headerAmount + ' ' + headerTotal + '\n';
+  output += separatorLine + '\n';
+
+  if (Array.isArray(receiptData?.items)) {
+    receiptData.items.forEach((item: any) => {
+      const qty = String(item.quantity || 1);
+      const qtyLabel = qty;
+      const productName = sanitizeText(item.productName || item.name || 'Item');
+      const truncatedProduct = productName.length > productColWidth ? productName.substring(0, productColWidth) : productName;
+      const unitPrice = `₱${Number(item.sellingPrice || item.price || 0).toFixed(2)}`;
+      const total = `₱${Number(item.total || 0).toFixed(2)}`;
+
+      output += padRight(truncatedProduct, productColWidth) + ' ' + padLeft(qtyLabel, qtyColWidth) + ' ' + padLeft(unitPrice, amountColWidth) + ' ' + padLeft(total, totalColWidth) + '\n';
+
+      const skuText = sanitizeText(item.skuId || item.productId || '');
+      if (skuText) {
+        output += `    ${skuText}\n`;
+      }
+      output += `    @ ${Number(item.sellingPrice || item.price || 0).toFixed(2)} each\n`;
+    });
+  }
+
+  output += separatorLine + '\n';
+
+  const vatableSalesAmt = Number(receiptData?.vatableSales || 0).toFixed(2);
+  const subtotalAmt = Number(receiptData?.subtotal || 0).toFixed(2);
+  const vatAmt = Number(receiptData?.vatAmount || 0).toFixed(2);
+  const vatExemptAmt = Number((receiptData?.vatExempt ?? receiptData?.vatExemptAmount) || 0).toFixed(2);
+  const discountAmt = Number(receiptData?.discount || 0).toFixed(2);
+  const totalAmt = Number(receiptData?.totalAmount || receiptData?.netAmount || 0).toFixed(2);
+
+  if (Number(vatableSalesAmt) > 0) {
+    output += padLeft(`Vatable Sales: ${vatableSalesAmt}`, lineChars) + '\n';
+  } else if (Number(subtotalAmt) > 0) {
+    output += padLeft(`Subtotal: ${subtotalAmt}`, lineChars) + '\n';
+  }
+  if (Number(vatAmt) > 0) {
+    output += padLeft(`VAT Amount: ${vatAmt}`, lineChars) + '\n';
+  }
+  if (Number(vatExemptAmt) > 0) {
+    output += padLeft(`VAT Exempt: ${vatExemptAmt}`, lineChars) + '\n';
+  }
+  if (Number(discountAmt) > 0) {
+    output += padLeft(`Discount: ${discountAmt}`, lineChars) + '\n';
+  }
+
+  output += doubleSeparatorLine + '\n';
+  output += padLeft(`Net Amount: ${totalAmt}`, lineChars) + '\n';
+  output += doubleSeparatorLine + '\n';
+  output += '\n';
+
+  output += centerLine('Thank you for your purchase!') + '\n';
+  output += centerLine('Please come again.') + '\n';
+  output += '\n';
+  output += centerLine('This receipt serves as a sales acknowledgment receipt. This document is not valid for claim of input tax.') + '\n';
+
+  return output;
 }
 
 export function encodeEscposStringToBytes(input: string): Uint8Array {

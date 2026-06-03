@@ -592,6 +592,10 @@ export class StoreService {
   getStore(storeId: string) {
     return this.stores().find(store => store.id === storeId);
   }
+
+  getStoreSubscriptionEndDate(storeId: string): Date | undefined {
+    return this.getStore(storeId)?.subscriptionEndDate;
+  }
   
   /**
    * Generate default invoice number for new stores
