@@ -183,9 +183,9 @@ export function generateESCPOSCommands(receiptData: any, paperConfig: PaperSizeC
   
   // Items header - BOLD and clearer (adapt to paper width)
   commands += '\x1B\x45\x01'; // Bold on
-  const qtyColWidth = 8;
-  const amountColWidth = 10;
-  const totalColWidth = 10;
+  const qtyColWidth = 3;
+  const amountColWidth = 8;
+  const totalColWidth = 8;
   const productColWidth = lineChars - qtyColWidth - amountColWidth - totalColWidth - 3;
   const itemsHeader = 'Product'.padEnd(productColWidth) + ' ' + 'Qty'.padEnd(qtyColWidth) + ' ' + 'Amount'.padEnd(amountColWidth) + ' ' + 'Total'.padStart(totalColWidth);
   commands += itemsHeader + '\n';
@@ -213,7 +213,7 @@ export function generateESCPOSCommands(receiptData: any, paperConfig: PaperSizeC
 
       const skuText = sanitizeText(item.skuId || item.productId || '');
       if (skuText) {
-        commands += `    SKU: ${skuText}\n`;
+        commands += `    ${skuText}\n`;
       }
       commands += `    @ ${unitPrice} each\n`;
     });
@@ -474,10 +474,9 @@ export function generateReceiptPreviewText(receiptData: any, paperConfig: PaperS
       const total = `₱${Number(item.total || 0).toFixed(2)}`;
 
       output += padRight(truncatedProduct, productColWidth) + ' ' + padLeft(qtyLabel, qtyColWidth) + ' ' + padLeft(unitPrice, amountColWidth) + ' ' + padLeft(total, totalColWidth) + '\n';
-
       const skuText = sanitizeText(item.skuId || item.productId || '');
       if (skuText) {
-        output += `    ${skuText}\n`;
+        output += `  ${skuText}\n`;
       }
       output += `    @ ${Number(item.sellingPrice || item.price || 0).toFixed(2)} each\n`;
     });
