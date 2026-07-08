@@ -6,21 +6,38 @@ import { AuthService } from '../../../services/auth.service';
   selector: 'app-storefront-settings',
   standalone: true,
   imports: [CommonModule],
+  styles: [
+    `.storefront-shell { max-width: 56rem; margin: 0 auto; padding: 0 1rem; }
+    .storefront-panel { border: 1px solid #cbd5e1; border-radius: 1.75rem; background: #ffffff; padding: 1.5rem; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08); }
+    .storefront-header { display: flex; flex-direction: column; gap: 1rem; }
+    .storefront-actions { display: flex; flex-direction: column; gap: 0.75rem; }
+    @media (min-width: 640px) { .storefront-actions { flex-direction: row; } }
+    .storefront-cta { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.8rem 1.5rem; border-radius: 9999px; font-size: 0.95rem; font-weight: 600; border: 1px solid transparent; transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease; cursor: pointer; text-decoration: none; }
+    .storefront-cta:hover { transform: translateY(-1px); }
+    .storefront-cta.primary { background: #4f46e5; color: white; box-shadow: 0 14px 30px rgba(79, 70, 229, 0.15); }
+    .storefront-cta.primary:hover { background: #4338ca; }
+    .storefront-cta.secondary { background: #ffffff; color: #1f2937; border-color: #cbd5e1; }
+    .storefront-cta.secondary:hover { background: #f8fafc; }
+    .storefront-grid { display: grid; gap: 1rem; margin-top: 1.5rem; }
+    @media (min-width: 768px) { .storefront-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .storefront-card { border: 1px solid #cbd5e1; border-radius: 1.75rem; background: #ffffff; padding: 1.5rem; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05); }
+    .storefront-card h3 { margin: 0; font-size: 1.125rem; font-weight: 600; color: #0f172a; }
+    .storefront-card p { margin: 0.75rem 0 0; color: #475569; font-size: 0.95rem; line-height: 1.6; }
+    .storefront-notes { margin-top: 0.75rem; color: #475569; font-size: 0.95rem; line-height: 1.7; }
+    .storefront-notes li { margin-top: 0.65rem; }
+    `
+  ],
   template: `
-    <div class="max-w-4xl mx-auto px-4 sm:px-0">
-      <div class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/40">
-        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div class="storefront-shell">
+      <div class="storefront-panel">
+        <div class="storefront-header">
           <div>
             <h2 class="text-2xl font-semibold text-slate-900">Storefront Settings</h2>
             <p class="mt-2 text-sm text-slate-500">Configure storefront preview for your current active store and open the live storefront in one click.</p>
           </div>
-          <div class="flex flex-col gap-3 sm:flex-row">
-            <button class="inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/10 transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" (click)="openPreview()">
-              Open Storefront Preview
-            </button>
-            <button class="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" (click)="openPreviewNewTab()">
-              Open in New Tab
-            </button>
+          <div class="storefront-actions">
+            <button class="storefront-cta primary" (click)="openPreview()">Open Storefront Preview</button>
+            <button class="storefront-cta secondary" (click)="openPreviewNewTab()">Open in New Tab</button>
           </div>
         </div>
       </div>

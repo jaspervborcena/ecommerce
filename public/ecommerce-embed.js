@@ -5,12 +5,20 @@
       return;
     }
 
+    const scriptEl = document.currentScript;
+    const hostUrl = scriptEl && scriptEl.src
+      ? new URL(scriptEl.src).origin
+      : window.location.origin;
+
     widgets.forEach(widget => {
       if (widget.dataset.rendered === '1') return;
 
       const token = widget.dataset.token || 'unknown-token';
       const productId = widget.dataset.productId || 'unknown-product';
       const storeId = widget.dataset.storeId || 'unknown-store';
+      const previewUrl = productId && productId !== 'unknown-product'
+        ? `${hostUrl}/product/${encodeURIComponent(productId)}`
+        : `${hostUrl}/store/${encodeURIComponent(storeId)}`;
 
       const container = document.createElement('div');
       container.style.fontFamily = 'Arial, sans-serif';
@@ -38,7 +46,7 @@
       container.appendChild(info);
 
       const button = document.createElement('button');
-      button.textContent = 'Buy Now';
+      button.textContent = 'Open Storefront Preview';
       button.style.border = 'none';
       button.style.borderRadius = '8px';
       button.style.background = '#4338ca';
@@ -46,8 +54,9 @@
       button.style.cursor = 'pointer';
       button.style.fontSize = '14px';
       button.style.padding = '10px 18px';
+      button.style.fontWeight = '600';
       button.addEventListener('click', function () {
-        window.alert('Tovrika embed button clicked. Embedded checkout flow is a placeholder for now.');
+        window.open(previewUrl, '_blank', 'noopener,noreferrer,width=1080,height=900');
       });
       container.appendChild(button);
 
@@ -55,7 +64,7 @@
       note.style.fontSize = '12px';
       note.style.color = '#6b7280';
       note.style.marginTop = '12px';
-      note.textContent = 'Local embed placeholder. Replace with a full checkout widget later.';
+      note.textContent = 'Opens the hosted storefront preview for this product or store.';
       container.appendChild(note);
 
       widget.innerHTML = '';

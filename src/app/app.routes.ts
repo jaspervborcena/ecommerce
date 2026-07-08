@@ -85,6 +85,14 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/storefront/storefront-detail.component').then(m => m.StorefrontDetailComponent)
   },
   {
+    path: 'cart',
+    loadComponent: () => import('./pages/storefront/storefront-cart.component').then(m => m.StorefrontCartComponent)
+  },
+  {
+    path: 'checkout',
+    loadComponent: () => import('./pages/storefront/storefront-checkout.component').then(m => m.StorefrontCheckoutComponent)
+  },
+  {
     path: 'login',
     loadComponent: () => import('./pages/auth/login/login.component').then(m => m.LoginComponent),
     canActivate: [async (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => {
