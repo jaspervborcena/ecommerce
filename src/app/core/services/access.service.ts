@@ -12,6 +12,7 @@ export interface Permissions {
   canViewInventory: boolean;
   canViewPOS: boolean;
   canViewProducts: boolean;
+  canViewStorefront: boolean;
   canViewStore: boolean;
   canViewCompanyProfile: boolean;
   canEditCompanyProfile: boolean;
@@ -33,6 +34,7 @@ export class AccessService {
     canViewInventory: true,
     canViewPOS: true,
     canViewProducts: true,
+    canViewStorefront: true,
     canViewStore: true,
     canViewCompanyProfile: true,
     canEditCompanyProfile: true,
@@ -52,6 +54,7 @@ export class AccessService {
   canViewInventory: false,
   canViewPOS: true,
   canViewProducts: true,
+  canViewStorefront: false,
   canViewStore: false,
   canViewCompanyProfile: true, // minimal view only
   canEditCompanyProfile: false,

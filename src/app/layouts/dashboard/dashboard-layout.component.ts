@@ -49,16 +49,15 @@ import { NetworkService } from '../../core/services/network.service';
               <span class="ml-2">Products</span>
               <span *ngIf="networkService.isOffline() && !offlineNavService.isRouteSafeOffline('/dashboard/products')" class="text-xs text-orange-500">(Limited offline)</span>
             </a>
-            <a *ngIf="permissions.canViewPOS" 
-               (click)="navigateTo('/pos')" 
-               [class.nav-link-active]="isCurrentRoute('/pos')"
-               class="nav-link flex flex-col items-center justify-center cursor-pointer" 
-               title="Point of Sale">
+            <a
+              (click)="navigateTo('/dashboard/storefront-settings')" 
+              [class.nav-link-active]="isCurrentRoute('/dashboard/storefront-settings')"
+              class="nav-link flex flex-col items-center justify-center cursor-pointer" 
+              title="Storefront Settings">
               <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M6 7v10a2 2 0 002 2h8a2 2 0 002-2V7" />
               </svg>
-              <span class="ml-2">POS</span>
-              <span *ngIf="networkService.isOffline() && offlineNavService.isRouteSafeOffline('/pos')" class="text-xs text-green-500">(✓ Offline ready)</span>
+              <span class="ml-2">Storefront</span>
             </a>
             <!-- ...existing code for full menu for other roles, using permissions checks... -->
           </nav>
@@ -80,15 +79,6 @@ import { NetworkService } from '../../core/services/network.service';
           <span class="text-[10px] group-hover:block hidden">Overview</span>
         </a>
         <!-- Add more mobile navigation items with safe navigation -->
-        <a (click)="navigateTo('/pos')" 
-           [class.nav-link-active]="isCurrentRoute('/pos')"
-           class="mx-2 flex flex-col items-center justify-center group cursor-pointer" 
-           title="POS">
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span class="text-[10px] group-hover:block hidden">POS</span>
-        </a>
       </nav>
 
 

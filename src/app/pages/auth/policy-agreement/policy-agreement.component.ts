@@ -285,13 +285,8 @@ export class PolicyAgreementComponent implements OnInit {
       
       if (hasValidPermissions) {
         // Redirect based on role
-        if (currentPermission.roleId === 'cashier') {
-          console.log('📍 Policy Agreement: Cashier user, redirecting to POS...');
-          await this.router.navigate(['/pos']);
-        } else {
-          console.log('📍 Policy Agreement: User has valid permissions, redirecting to dashboard...');
-          await this.router.navigate(['/dashboard']);
-        }
+        console.log('📍 Policy Agreement: User has valid permissions, redirecting to dashboard...');
+        await this.router.navigate(['/dashboard']);
       } else {
         console.log('📍 Policy Agreement: User needs onboarding, redirecting to onboarding...');
         console.log('📍 Policy Agreement: About to navigate to /onboarding...');

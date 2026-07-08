@@ -18,11 +18,10 @@ export const cashierGuard: CanActivateFn = async (route, state) => {
 
   const currentPermission = authService.getCurrentPermission();
   
-  // If user is a cashier, redirect them to POS
+  // Allow cashiers to continue to the dashboard flow
   if (currentPermission?.roleId === 'cashier') {
-    console.log('🛡️ CashierGuard: Cashier detected, redirecting to POS');
-    router.navigate(['/pos']);
-    return false;
+    console.log('🛡️ CashierGuard: Cashier detected, allowing access to dashboard');
+    return true;
   }
 
   // For non-cashiers, allow access

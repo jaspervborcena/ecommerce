@@ -1246,17 +1246,42 @@ import * as XLSX from 'xlsx';
   ],
   template: `
     <div class="products-management">
-      <!-- Header -->
+      <!-- Shopify-like Header: KPI cards, Tabs, Actions -->
       <div class="header" style="padding: 1rem 0;">
-        <div class="header-content">
-          <div class="header-text">
+        <div class="header-content" style="align-items:flex-start;">
+          <div style="flex:1">
             <h1 class="page-title" style="font-size: 1.75rem; margin: 0 0 0.25rem 0;">Product Management</h1>
-            <p class="page-subtitle" style="font-size: 0.875rem; margin: 0;">Manage your product catalog and inventory</p>
+            <p class="page-subtitle" style="font-size: 0.875rem; margin: 0 0 1rem 0;">Manage your product catalog and inventory</p>
+
+            <!-- KPI Cards -->
+            <div style="display:flex; gap:0.75rem; margin-bottom:1rem; flex-wrap:wrap;">
+              <div style="background:white; border-radius:8px; padding:12px 16px; box-shadow:0 1px 4px rgba(0,0,0,0.06); min-width:160px;">
+                <div style="font-size:12px; color:#6b7280;">Total products</div>
+                <div style="font-size:20px; font-weight:700;">{{ products().length }}</div>
+              </div>
+              <div style="background:white; border-radius:8px; padding:12px 16px; box-shadow:0 1px 4px rgba(0,0,0,0.06); min-width:160px;">
+                <div style="font-size:12px; color:#6b7280;">Active products</div>
+                <div style="font-size:20px; font-weight:700;">{{ getCountForTab('active') }}</div>
+              </div>
+              <div style="background:white; border-radius:8px; padding:12px 16px; box-shadow:0 1px 4px rgba(0,0,0,0.06); min-width:160px;">
+                <div style="font-size:12px; color:#6b7280;">Low stock (&le;10)</div>
+                <div style="font-size:20px; font-weight:700;">{{ getLowStockCount() }}</div>
+              </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tab-navigation">
+              <button class="tab-button" [class.active]="currentTab() === 'all'" (click)="setTab('all')">All ({{ products().length }})</button>
+              <button class="tab-button" [class.active]="currentTab() === 'active'" (click)="setTab('active')">Active ({{ getCountForTab('active') }})</button>
+              <button class="tab-button" [class.active]="currentTab() === 'inactive'" (click)="setTab('inactive')">Inactive ({{ getCountForTab('inactive') }})</button>
+              <button class="tab-button" [class.active]="currentTab() === 'expired'" (click)="setTab('expired')">Expired ({{ getCountForTab('expired') }})</button>
+            </div>
           </div>
-          <div class="header-actions">
-            <button class="btn btn-primary" (click)="openAddModal()">📦 Add New Product</button>
-            <button class="btn btn-primary" (click)="onCreateTag()">🏷️ Create New Tag</button>
-            <button class="btn btn-primary" (click)="openBulkUploadModal()">⬆️ Bulk Upload</button>
+
+          <div class="header-actions" style="display:flex; gap:0.5rem; align-items:center;">
+            <button class="btn btn-secondary" (click)="exportProducts()">Export</button>
+            <button class="btn btn-secondary" (click)="openBulkUploadModal()">Import</button>
+            <button class="btn btn-primary" (click)="openAddModal()">Add product</button>
           </div>
         </div>
       </div>
@@ -2570,6 +2595,16 @@ export class ProductManagementComponent implements OnInit {
           product.tags && product.tags.includes(filterTagId)
         );
       });
+    }
+
+    // Tab filtering (all | active | inactive | expired)
+    try {
+      const tab = (this.currentTab && (this.currentTab() as string)) || 'all';
+      if (tab && tab !== 'all') {
+        filtered = filtered.filter(p => ((p.status || '').toLowerCase() === tab));
+      }
+    } catch (e) {
+      // ignore if signal not available during server-side rendering or tests
     }
 
     // Sort by updatedAt descending (most recently updated first)
@@ -4555,6 +4590,51 @@ export class ProductManagementComponent implements OnInit {
 
   getDisplayProductCount(): number {
     return Math.min(this.filteredProducts().length, this.maxProducts);
+  }
+
+  // Current active tab for product filtering (all|active|inactive|expired)
+  currentTab = signal<string>('all');
+
+  getCountForTab(status: string): number {
+    if (status === 'all') return this.products().length;
+    return this.products().filter(p => (p.status || '').toLowerCase() === status).length;
+  }
+
+  getLowStockCount(): number {
+    return this.products().filter(p => (p.totalStock || 0) <= 10).length;
+  }
+
+  setTab(tab: string): void {
+    this.currentTab.set(tab);
+    this.currentPage = 1;
+    // trigger any needed UI updates
+    try { this.cdr.detectChanges(); } catch {}
+  }
+
+  exportProducts(): void {
+    try {
+      const items = this.filteredProducts().slice(0, this.maxProducts);
+      if (!items || items.length === 0) {
+        this.toastService.info('No products to export');
+        return;
+      }
+      const headers = ['id','productName','skuId','category','totalStock','sellingPrice','status','storeId'];
+      const rows = items.map(p => headers.map(h => JSON.stringify((p as any)[h] ?? '')).join(',')).join('\n');
+      const csv = headers.join(',') + '\n' + rows;
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `products-export-${Date.now()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      this.toastService.success('Export started');
+    } catch (err) {
+      console.error('Export failed', err);
+      this.toastService.error('Export failed');
+    }
   }
 
   getTotalPages(): number {

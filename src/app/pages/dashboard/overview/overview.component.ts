@@ -124,57 +124,6 @@ import { ConfirmationDialogComponent, ConfirmationDialogData } from '../../../sh
               </div>
             </div>
 
-            <!-- Unpaid Card -->
-            <div class="sales-card unpaid-card">
-              <div class="card-icon">
-                <svg class="icon" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 11.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z"/>
-                </svg>
-              </div>
-              <div class="card-content">
-                <div class="card-value">₱{{ ledgerUnpaidAmount() | number:'1.0-0' }}</div>
-                <div class="card-label">Unpaid ({{ ledgerUnpaidQty() }})</div>
-                <div class="card-change">
-                  <span class="change-icon">⏳</span>
-                  <span class="change-text">Pending payments</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Recovered Card -->
-            <div class="sales-card recovered-card">
-              <div class="card-icon">
-                <svg class="icon" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
-                </svg>
-              </div>
-              <div class="card-content">
-                <div class="card-value">₱{{ ledgerRecoveredAmount() | number:'1.0-0' }}</div>
-                <div class="card-label">Recovered ({{ ledgerRecoveredQty() }})</div>
-                <div class="card-change">
-                  <span class="change-icon">✓</span>
-                  <span class="change-text">Payments collected</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Total Expenses Card -->
-            <div class="sales-card expenses-card">
-              <div class="card-icon">
-                <svg class="icon" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M4 3h12v2H4V3zm0 4h12v2H4V7zm0 4h8v2H4v-2z" />
-                </svg>
-              </div>
-              <div class="card-content">
-                <div class="card-value">₱{{ totalExpenses() | number:'1.0-0' }}</div>
-                <div class="card-label">Total Expenses</div>
-                <div class="card-change">
-                  <span class="change-icon">{{ expenseChange().symbol }}</span>
-                  <span class="change-text">{{ expenseChange().percent }}% Compared to yesterday</span>
-                </div>
-              </div>
-            </div>
-
             <!-- Net Profit Card -->
             <div class="sales-card profit-card">
               <div class="card-icon">

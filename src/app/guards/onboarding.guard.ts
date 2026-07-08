@@ -11,12 +11,6 @@ export const onboardingGuard: CanActivateFn = async (route, state) => {
   const storeService = inject(StoreService);
   const router = inject(Router);
 
-  // TEMPORARY: Complete bypass for POS routes to test functionality
-  if (state.url.includes('/pos')) {
-    console.warn('⚠️ POS is running in bypass mode - this is for testing the invoice functionality only');
-    return true;
-  }
-
   const user = authService.currentUser();
 
   if (!user) {
@@ -35,12 +29,6 @@ export const onboardingGuard: CanActivateFn = async (route, state) => {
     return true;
   }
   
-  // TEMPORARY: Allow POS access for testing (bypass company check for POS routes)
-  if (state.url.includes('/pos') && !currentPermission?.companyId) {
-    console.warn('⚠️ POS is running without proper company setup - this is for testing only');
-    return true;
-  }
-  
   // Step 1: Check company profile
   if (!currentPermission?.companyId) {
     router.navigate(['/dashboard/company-profile']);
@@ -49,12 +37,6 @@ export const onboardingGuard: CanActivateFn = async (route, state) => {
 
   await companyService.loadCompanies();
   const company = await companyService.getActiveCompany();
-  
-  // TEMPORARY: Allow POS access for testing (bypass company check for POS routes)
-  if (state.url.includes('/pos') && !company) {
-    console.warn('⚠️ POS is running without active company - this is for testing only');
-    return true;
-  }
   
   if (!company) {
     router.navigate(['/dashboard/company-profile']);

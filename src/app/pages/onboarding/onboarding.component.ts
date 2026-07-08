@@ -47,11 +47,7 @@ export class OnboardingComponent {
       return;
     }
     
-    if (role === 'cashier') {
-      this.router.navigate(['/pos']);
-    } else {
-      this.router.navigate(['/dashboard']);
-    }
+    this.router.navigate(['/dashboard']);
   }
 
   async logout() {

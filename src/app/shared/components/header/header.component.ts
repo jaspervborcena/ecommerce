@@ -72,16 +72,6 @@ export class HeaderComponent implements OnInit {
     return cssClass;
   });
   
-  // Device toggle for POS pages
-  protected isPosPage = computed(() => {
-    const url = this.router.url;
-    return url.includes('/pos') || url.includes('/dashboard/pos');
-  });
-  
-  protected isMobilePosPage = computed(() => {
-    const url = this.router.url;
-    return url.includes('/pos/mobile');
-  });
   
   // Computed properties
   protected userInitial = computed(() => {
@@ -196,15 +186,6 @@ export class HeaderComponent implements OnInit {
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     }
-  }
-
-  // Device toggle methods for POS pages
-  switchToMobile(): void {
-    this.router.navigate(['/pos/mobile']);
-  }
-
-  switchToDesktop(): void {
-    this.router.navigate(['/pos']);
   }
 
   // Language selection methods

@@ -26,7 +26,7 @@ import { ChunkErrorService } from './core/services/chunk-error.service';
   ]
 })
 export class AppComponent {
-  title = 'POS System';
+  title = 'Ecommerce System';
   protected isNavigating = signal(false);
   private router = inject(Router);
   private chunkErrorService = inject(ChunkErrorService);

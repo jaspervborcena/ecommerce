@@ -43,11 +43,6 @@ export const visitorGuard: CanActivateFn = (route, state) => {
   // User is NOT a visitor
   // Only block the onboarding route for non-visitors; allow other routes (e.g., /dashboard) to proceed
   if (state.url === '/onboarding') {
-    if (currentPermission.roleId === 'cashier') {
-      console.log('👤 VisitorGuard: Non-visitor cashier attempting onboarding, redirecting to POS');
-      router.navigate(['/pos']);
-      return false;
-    }
     console.log('👤 VisitorGuard: Non-visitor attempting onboarding, redirecting to dashboard');
     router.navigate(['/dashboard']);
     return false;

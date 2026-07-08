@@ -5,7 +5,6 @@ import { inject } from '@angular/core';
 import { authGuard } from './guards/auth.guard';
 import { onboardingGuard, companyProfileGuard } from './guards/onboarding.guard';
 import { policyGuard } from './guards/policy.guard';
-import { cashierGuard } from './guards/cashier.guard';
 import { visitorGuard } from './guards/visitor.guard';
 import { AuthService } from './services/auth.service';
 import { roleGuard } from './guards/role.guard';
@@ -75,6 +74,15 @@ export const routes: Routes = [
       
       return true;
     }]
+  },
+  // Public storefront routes (Phase 1)
+  {
+    path: 'store/:storeId',
+    loadComponent: () => import('./pages/storefront/storefront-list.component').then(m => m.StorefrontListComponent)
+  },
+  {
+    path: 'product/:id',
+    loadComponent: () => import('./pages/storefront/storefront-detail.component').then(m => m.StorefrontDetailComponent)
   },
   {
     path: 'login',
@@ -229,6 +237,12 @@ export const routes: Routes = [
   canActivate: [onboardingGuard, roleGuard],
   data: { roles: ['creator', 'store_manager', 'admin'] }
       },
+        {
+      path: 'storefront-settings',
+      loadComponent: () => import('./pages/dashboard/storefront/storefront-settings.component').then(m => m.StorefrontSettingsComponent),
+      canActivate: [onboardingGuard, roleGuard],
+      data: { roles: ['creator', 'store_manager', 'admin'] }
+        },
       {
   path: 'stores',
   loadComponent: () => import('./pages/dashboard/stores-management/stores-management.component').then(m => m.StoresManagementComponent),
@@ -305,46 +319,7 @@ export const routes: Routes = [
   
   
   
-  // Standalone POS Route - Accessible by creator, store_manager, and cashier
-  {
-    path: 'pos',
-    loadComponent: () => import('./pages/dashboard/pos/pos.component').then(m => m.PosComponent),
-    canActivate: [authGuard, policyGuard, onboardingGuard, roleGuard],
-    data: { roles: ['creator', 'store_manager', 'cashier', 'admin'] }
-  },
 
-  // Mobile POS Route - Accessible by creator, store_manager, and cashier
-  {
-    path: 'pos/mobile',
-    loadComponent: () => import('./pages/dashboard/pos/mobile/pos-mobile.component').then(m => m.PosMobileComponent),
-    canActivate: [authGuard, policyGuard, onboardingGuard, roleGuard],
-    data: { roles: ['creator', 'store_manager', 'cashier', 'admin'] }
-  },
-
-  // Mobile Receipt Preview Route - Accessible by creator, store_manager, and cashier
-  {
-    path: 'pos/mobile/receipt-preview',
-    loadComponent: () => import('./pages/dashboard/pos/mobile/mobile-receipt-preview.component').then(m => m.MobileReceiptPreviewComponent),
-    canActivate: [authGuard, policyGuard, onboardingGuard, roleGuard],
-    data: { roles: ['creator', 'store_manager', 'cashier', 'admin'] }
-  },
-
-  // BACKUP Mobile POS Route for Testing - Uses print.service.bak.ts
-  {
-    path: 'pos/mobile-bak',
-    loadComponent: () => import('./pages/dashboard/pos/mobile_bak/pos-mobile.component').then(m => m.PosMobileBakComponent),
-    canActivate: [authGuard, policyGuard, onboardingGuard, roleGuard],
-    data: { roles: ['creator', 'store_manager', 'cashier', 'admin'] }
-  },
-
-  // BACKUP Mobile Receipt Preview Route for Testing
-  {
-    path: 'pos/mobile-bak/receipt-preview',
-    loadComponent: () => import('./pages/dashboard/pos/mobile_bak/mobile-receipt-preview.component').then(m => m.MobileReceiptPreviewBakComponent),
-    canActivate: [authGuard, policyGuard, onboardingGuard, roleGuard],
-    data: { roles: ['creator', 'store_manager', 'cashier', 'admin'] }
-  },
-  
   // Fallback route
   {
     path: '**',

@@ -11,7 +11,6 @@ export class OfflineNavigationService {
 
   // Define which routes are safe for offline use
   private offlineSafeRoutes = [
-    '/pos',           // POS is essential and should work offline
     '/login',         // Login should always work
     '/help',          // Help pages are useful offline
     '/dashboard',     // Dashboard main page (if already loaded)
@@ -21,15 +20,15 @@ export class OfflineNavigationService {
 
   // Define offline fallback routes for problematic routes
   private offlineFallbackRoutes: { [key: string]: string } = {
-    '/dashboard/products': '/pos',                    // Products → POS (more relevant offline)
-    '/dashboard/stores': '/pos',                      // Stores → POS
-    '/dashboard/branches': '/pos',                    // Branches → POS
-    '/dashboard/access': '/dashboard',                // Access → Dashboard main
-    '/dashboard/user-roles': '/dashboard',            // User roles → Dashboard main
-    '/dashboard/invoice-setup': '/pos',               // Invoice setup → POS
-    '/dashboard/inventory': '/pos',                   // Inventory → POS
+    '/dashboard/products': '/dashboard',
+    '/dashboard/stores': '/dashboard',
+    '/dashboard/branches': '/dashboard',
+    '/dashboard/access': '/dashboard',
+    '/dashboard/user-roles': '/dashboard',
+    '/dashboard/invoice-setup': '/dashboard',
+    '/dashboard/inventory': '/dashboard',
     // '/dashboard/sales/summary' handled as offline-safe now
-    '/notifications': '/dashboard',                   // Notifications → Dashboard main
+    '/notifications': '/dashboard',
   };
 
   /**
@@ -60,7 +59,7 @@ export class OfflineNavigationService {
         return true;
       } catch (navErr) {
         console.warn(`🧭 OfflineNavigation: Navigation to ${route} failed while offline, attempting fallback`, navErr);
-        const fallbackRoute = this.offlineFallbackRoutes[route] || '/pos';
+        const fallbackRoute = this.offlineFallbackRoutes[route] || '/dashboard';
         await this.router.navigate([fallbackRoute]);
         return false;
       }
@@ -68,10 +67,10 @@ export class OfflineNavigationService {
     } catch (error) {
       console.error(`🧭 OfflineNavigation: Navigation failed for ${route}:`, error);
       
-      // Ultimate fallback - go to POS which should be most stable
+      // Ultimate fallback - go to dashboard if offline fallback fails
       try {
-        console.log(`🧭 OfflineNavigation: Using ultimate fallback - navigating to /pos`);
-        await this.router.navigate(['/pos']);
+        console.log(`🧭 OfflineNavigation: Using ultimate fallback - navigating to /dashboard`);
+        await this.router.navigate(['/dashboard']);
         return false;
       } catch (fallbackError) {
         console.error(`🧭 OfflineNavigation: Even fallback failed:`, fallbackError);
@@ -93,7 +92,7 @@ export class OfflineNavigationService {
    * Get the offline fallback route for a given route
    */
   getOfflineFallback(route: string): string {
-    return this.offlineFallbackRoutes[route] || '/pos';
+    return this.offlineFallbackRoutes[route] || '/dashboard';
   }
 
   /**

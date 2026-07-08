@@ -391,8 +391,8 @@ export class DashboardComponent implements OnInit {
       this.currentActivePage.set('admin');
     } else if (url.includes('/dashboard/products')) {
       this.currentActivePage.set('products');
-    } else if (url === '/pos' || url.startsWith('/pos/')) {
-      this.currentActivePage.set('pos');
+    } else if (url.includes('/dashboard/storefront-settings')) {
+      this.currentActivePage.set('storefront-settings');
     } else if (url.includes('/dashboard/sales/summary')) {
       this.currentActivePage.set('sales-summary');
     } else if (url.includes('/dashboard/inventory')) {

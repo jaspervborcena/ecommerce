@@ -50,11 +50,6 @@ export class UserStatusService {
       return '/onboarding';
     }
     
-    const currentPermission = this.authService.getCurrentPermission();
-    if (currentPermission?.roleId === 'cashier') {
-      return '/pos';
-    }
-    
     return '/dashboard';
   }
 }

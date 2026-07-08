@@ -10,7 +10,7 @@ import { Firestore, collection, query, where, getDocs, limit } from '@angular/fi
  * - If no roles specified on the route, allow.
  * - Determine role from AuthService.getCurrentPermission().roleId with safe fallbacks.
  * - If role allowed, allow; otherwise redirect by role:
- *   cashier -> /pos; creator/store_manager -> /dashboard; visitor -> /onboarding; default -> /dashboard/overview
+ *   cashier -> /dashboard; creator/store_manager -> /dashboard; visitor -> /onboarding; default -> /dashboard/overview
  */
 export const roleGuard: CanActivateFn = async (route, state) => {
   const router = inject(Router);
@@ -119,7 +119,7 @@ export const roleGuard: CanActivateFn = async (route, state) => {
   // Redirect based on role
   switch (roleId) {
     case 'cashier':
-      router.navigate(['/pos']);
+      router.navigate(['/dashboard']);
       break;
     case 'creator':
     case 'store_manager':

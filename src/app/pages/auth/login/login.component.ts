@@ -98,9 +98,7 @@ export class LoginComponent implements OnInit {
             await this.router.navigate(['/dashboard']);
             console.log('🔐 Login: Navigation to dashboard successful');
           } catch (navError) {
-            console.warn('🔐 Login: Dashboard navigation failed, trying POS...', navError);
-            // Fallback to POS if dashboard also fails
-            await this.router.navigate(['/pos']);
+            console.warn('🔐 Login: Dashboard navigation failed, staying on login...', navError);
           }
         } else {
           // Online mode - check if user already agreed to policy
