@@ -25,7 +25,7 @@ import { AuthService } from '../../services/auth.service';
                   <a routerLink="/" class="hover:text-primary-600 transition-colors">Tovrika</a>
                 </h1>
               </div>
-              <span class="ml-3 px-2 py-1 bg-primary-50 text-primary-700 text-xs font-medium rounded-full">POS System</span>
+              <span class="ml-3 px-2 py-1 bg-primary-50 text-primary-700 text-xs font-medium rounded-full">Ecommerce Platform</span>
             </div>
             
             <div class="flex items-center space-x-1">

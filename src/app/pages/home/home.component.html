@@ -145,15 +145,15 @@
           <!-- Guest hero template (shown for non-authenticated users AND visitors) -->
           <ng-template #guestHero>
             <h2 class="hero-title">
-              <span class="block">Modern Point of Sale</span>
-              <span class="block">for Modern Businesses</span>
+              <span class="block">Modern Ecommerce</span>
+              <span class="block">for Growing Brands</span>
             </h2>
             <p class="hero-subtitle">
-              Everything you need to manage your business, from anywhere. Professional, reliable, and built for growth.
+              Launch and manage your online store with catalog management, orders, payments, and customer growth tools in one place.
             </p>
             <div class="hero-actions">
               <a routerLink="/register" class="cta-button primary">
-                Get Started Free
+                Start Your Store
               </a>
               <!-- Join/Proceed button: label depends on visitor-authenticated state -->
               <a routerLink="/onboarding" class="cta-button secondary" *ngIf="!(isAuthenticated() && userRole() === 'visitor')">
@@ -181,70 +181,70 @@
         </div>
 
         <div class="features-grid">
-          <!-- Point of Sale -->
+          <!-- Online Store -->
           <div class="feature-card">
             <div class="feature-icon">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
             </div>
-            <h3 class="feature-title">Point of Sale</h3>
-            <p class="feature-description">Fast and intuitive POS system with offline capabilities and real-time synchronization.</p>
+            <h3 class="feature-title">Online Store</h3>
+            <p class="feature-description">Beautiful storefronts and product pages that make it easy for customers to discover and buy from your brand.</p>
           </div>
 
-          <!-- Inventory Management -->
+          <!-- Catalog Management -->
           <div class="feature-card">
             <div class="feature-icon">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
               </svg>
             </div>
-            <h3 class="feature-title">Inventory Management</h3>
-            <p class="feature-description">Real-time inventory tracking and management with smart alerts and analytics.</p>
+            <h3 class="feature-title">Catalog Management</h3>
+            <p class="feature-description">Organize products, inventory, pricing, and promotions with smart tools built for growth.</p>
           </div>
 
-          <!-- Reports & Analytics -->
+          <!-- Customer Insights -->
           <div class="feature-card">
             <div class="feature-icon">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
-            <h3 class="feature-title">Reports & Analytics</h3>
-            <p class="feature-description">Detailed insights and reports for better decision making and business growth.</p>
+            <h3 class="feature-title">Customer Insights</h3>
+            <p class="feature-description">Track orders, conversion data, and customer behavior to make smarter business decisions.</p>
           </div>
 
-          <!-- Multi-Store Support -->
+          <!-- Multi-Channel Sales -->
           <div class="feature-card">
             <div class="feature-icon">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
             </div>
-            <h3 class="feature-title">Multi-Store Support</h3>
-            <p class="feature-description">Manage multiple locations from a single dashboard with centralized control.</p>
+            <h3 class="feature-title">Multi-Channel Sales</h3>
+            <p class="feature-description">Sell across online channels from one dashboard with centralized inventory and order control.</p>
           </div>
 
-          <!-- Offline Mode -->
+          <!-- Secure Checkout -->
           <div class="feature-card">
             <div class="feature-icon">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <h3 class="feature-title">Offline Mode</h3>
-            <p class="feature-description">Continue POS operations without internet. Data stores locally and syncs to cloud when reconnected based on your plan.</p>
+            <h3 class="feature-title">Secure Checkout</h3>
+            <p class="feature-description">Offer fast, reliable transactions with secure payments and dependable order processing.</p>
           </div>
 
-          <!-- Cloud Sync -->
+          <!-- Omnichannel Sync -->
           <div class="feature-card">
             <div class="feature-icon">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16a5 5 0 01-.916-9.916 5.002 5.002 0 019.832 0A5.002 5.002 0 0116 16m-7 3l3 3m0 0l3-3m-3 3V10" />
               </svg>
             </div>
-            <h3 class="feature-title">Cloud Sync</h3>
-            <p class="feature-description">All your data synced securely across devices with enterprise-grade security.</p>
+            <h3 class="feature-title">Omnichannel Sync</h3>
+            <p class="feature-description">Keep products, orders, and customer data aligned across devices and channels with confidence.</p>
           </div>
         </div>
       </div>
@@ -256,7 +256,7 @@
         <div class="cta-content">
           <h2 class="cta-title">Ready to get started?</h2>
           <p class="cta-subtitle">
-            Join thousands of businesses already using Tovrika to streamline their operations and boost sales.
+            Join growing brands already using Tovrika Ecommerce to sell smarter and scale faster.
           </p>
           <div class="cta-actions">
             <a routerLink="/register" class="cta-button primary">
@@ -284,7 +284,7 @@
             </a>
           </div>
           <div class="footer-text">
-            <p>&copy; 2025 Tovrika. All rights reserved. Built with ❤️ for modern businesses.</p>
+            <p>&copy; 2025 Tovrika Ecommerce. All rights reserved. Built with ❤️ for modern commerce.</p>
           </div>
         </div>
       </div>
