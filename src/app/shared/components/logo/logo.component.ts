@@ -54,7 +54,9 @@ export type LogoBackground = 'none' | 'white' | 'light' | 'rounded' | 'circle';
     }
 
     .logo-image {
-      object-fit: contain;
+      box-sizing: border-box;
+      object-fit: cover;
+      object-position: center;
       transition: all 0.2s ease;
     }
 
@@ -198,7 +200,7 @@ export class LogoComponent {
   @Input() background: LogoBackground = 'white';
 
   get logoSrc(): string {
-    return '/assets/tovrika_logo.png';
+    return '/assets/shao_tang_logo.png';
   }
 
   get altText(): string {

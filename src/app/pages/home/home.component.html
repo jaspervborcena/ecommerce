@@ -1,11 +1,11 @@
-<div class="home-layout">
+<div class="home-layout" [class.guest-mode]="!isAuthenticated()">
   <!-- Professional Header (same as dashboard) -->
   <header [class]="headerClass()" 
           [style.background]="isOnline() ? null : 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'">
     <div class="header-content">
       <div class="header-left">
         <div class="logo-section">
-          <app-logo 
+          <app-logo *ngIf="isAuthenticated()"
             size="md" 
             [showText]="true" 
             theme="light" 
@@ -13,6 +13,9 @@
             [clickable]="true"
             [companyName]="appName()">
           </app-logo>
+          <a *ngIf="!isAuthenticated()" routerLink="/" class="guest-header-brand">
+            <img src="assets/shao_tang_logo.png" alt="Shao Tang">
+          </a>
         </div>
       </div>
       
@@ -101,11 +104,13 @@
         
         <!-- Guest menu template -->
         <ng-template #guestMenu>
-          <a routerLink="/login" class="signin-btn" title="Sign in" aria-label="Sign in">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="signin-icon">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-          </a>
+          <nav class="guest-nav" aria-label="Main navigation">
+            <a routerLink="/" class="active">Home</a>
+            <a routerLink="/help">About Us</a>
+            <a routerLink="/register">Careers</a>
+            <a routerLink="/login">Login</a>
+            <a routerLink="/store/demo">Track Order</a>
+          </nav>
         </ng-template>
       </div>
     </div>
@@ -138,28 +143,35 @@
 
           <!-- Guest hero template (shown for non-authenticated users AND visitors) -->
           <ng-template #guestHero>
-            <h2 class="hero-title">
-              <span class="block">Modern Ecommerce</span>
-              <span class="block">for Growing Brands</span>
-            </h2>
+            <div class="restaurant-brand">
+              <img class="restaurant-logo" src="assets/shao_tang_logo.png" alt="Shao Tang authentic Chinese cuisine">
+            </div>
+            <p class="restaurant-kicker">Legendary flavors of China</p>
+            <h2 class="hero-title">Served to perfection: Shao Tang!</h2>
             <p class="hero-subtitle">
-              Launch and manage your online store with catalog management, orders, payments, and customer growth tools in one place.
+              Authentic Chinese cuisine made with fresh, carefully selected ingredients for a delicious experience every time.
             </p>
+            <div class="restaurant-meta">
+              <span>Fresh ingredients</span>
+              <span>Open Daily</span>
+            </div>
             <div class="hero-actions">
-              <a routerLink="/register" class="cta-button primary">
-                Start Your Store
-              </a>
-              <!-- Join/Proceed button: label depends on visitor-authenticated state -->
-              <a routerLink="/onboarding" class="cta-button secondary" *ngIf="!(isAuthenticated() && userRole() === 'visitor')">
-                Join a Store
-              </a>
-              <a routerLink="/onboarding" class="cta-button secondary" *ngIf="isAuthenticated() && userRole() === 'visitor'">
-                Proceed to Store
-              </a>
-              <!-- Hide Sign In when a visitor is already logged in -->
-              <a routerLink="/login" class="cta-button secondary" *ngIf="!isAuthenticated()">
-                Sign In
-              </a>
+              <a routerLink="/store/demo" class="cta-button primary">Order for pick up <small>Self booking</small></a>
+            </div>
+            <div class="tracking-panel">
+              <p>Check if your order is ready for pickup.</p>
+              <a routerLink="/store/demo" class="track-button">⌕ <span>Track my order</span></a>
+            </div>
+            <div class="order-via">
+              <span>Order via:</span>
+              <div>
+                <a href="https://www.foodpanda.ph/" target="_blank" rel="noopener">foodpanda</a>
+                <a href="https://food.grab.com/ph/en/" target="_blank" rel="noopener">Grab</a>
+              </div>
+            </div>
+            <div class="restaurant-contact">
+              <strong>Contact Us</strong>
+              <span>Visit us for an authentic Chinese dining experience</span>
             </div>
           </ng-template>
         </div>

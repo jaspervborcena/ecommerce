@@ -12,6 +12,27 @@ export class DefaultRolesService {
 
   getDefaultRoles(companyId: string, storeId: string): RoleDefinition[] {
     const now = new Date();
+    const customerPermissions: RolePermissions = {
+      canViewPOS: false,
+      canAddStore: false,
+      canAddProducts: false,
+      canViewProducts: false,
+      canViewStore: false,
+      canViewInventory: false,
+      canRemoveUsers: false,
+      canAddUser: false,
+      canMakePOS: false,
+      canViewCompanyProfile: false,
+      canEditCompanyProfile: false,
+      canAddCompanyProfile: false,
+      canViewOverview: false
+    };
+    const operationalPermissions: RolePermissions = {
+      ...customerPermissions,
+      canViewProducts: true,
+      canViewStore: true,
+      canViewOverview: true
+    };
     return [
       {
         roleId: 'creator',
@@ -35,6 +56,25 @@ export class DefaultRolesService {
         createdAt: now,
         updatedAt: now
       },
+      ...[
+        ['guest', customerPermissions],
+        ['registered_customer', customerPermissions],
+        ['subscriber', customerPermissions],
+        ['seller', operationalPermissions],
+        ['store_owner', operationalPermissions],
+        ['packaging_staff', operationalPermissions],
+        ['delivery_dispatcher', operationalPermissions],
+        ['delivery_rider', operationalPermissions],
+        ['support_agent', operationalPermissions],
+        ['marketing_manager', operationalPermissions]
+      ].map(([roleId, permissions]) => ({
+        roleId: roleId as string,
+        companyId,
+        storeId,
+        permissions: permissions as RolePermissions,
+        createdAt: now,
+        updatedAt: now
+      })),
       {
         roleId: 'store_manager',
         companyId,

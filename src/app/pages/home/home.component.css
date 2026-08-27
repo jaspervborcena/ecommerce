@@ -620,6 +620,316 @@ header.home-header.offline {
   flex-shrink: 0;
 }
 
+/* Public restaurant landing page */
+.guest-mode {
+  --restaurant-red: #ed1c24;
+  --restaurant-ink: #33271e;
+  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  background: #33271e;
+}
+
+.guest-mode .home-header {
+  height: 4.25rem;
+  padding: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  box-shadow: 0 2px 16px rgba(67, 56, 145, 0.24);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(12px);
+}
+
+.guest-mode .header-content {
+  height: 100%;
+  max-width: 940px;
+  padding: 0 1.25rem;
+}
+
+.guest-mode .header-left app-logo {
+  display: block;
+  transform: scale(0.82);
+  transform-origin: left center;
+}
+
+.guest-header-brand {
+  display: flex;
+  align-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  color: #fff;
+  text-decoration: none;
+}
+
+.guest-header-brand img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.guest-mode .header-actions {
+  display: none;
+}
+
+.guest-mode .guest-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.35rem;
+}
+
+.guest-mode .guest-nav a {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+
+.guest-mode .guest-nav a:hover,
+.guest-mode .guest-nav a.active {
+  color: #fff;
+}
+
+.guest-mode .guest-nav a.active {
+  padding: 0.62rem 1rem;
+  color: #fff;
+  background: var(--restaurant-red);
+  border-radius: 0.65rem;
+}
+
+.guest-mode .home-content {
+  margin-top: 4.25rem;
+}
+
+.guest-mode .hero-section {
+  min-height: calc(100vh - 4.25rem);
+  padding: 1.4rem 0 2.25rem;
+  display: flex;
+  align-items: center;
+  background-color: #70543c;
+  background-image: linear-gradient(rgba(24, 14, 7, 0.48), rgba(24, 14, 7, 0.6)), url('https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=2400&q=88');
+  background-position: center;
+  background-size: cover;
+}
+
+.guest-mode .hero-section::before {
+  background: linear-gradient(180deg, rgba(20, 10, 5, 0.05), rgba(20, 10, 5, 0.28));
+}
+
+.guest-mode .hero-container {
+  width: 100%;
+  max-width: 760px;
+}
+
+.guest-mode .hero-content {
+  max-width: 500px;
+}
+
+.guest-mode .restaurant-brand {
+  margin: 0 auto 0.7rem;
+  width: min(28rem, 86vw);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.guest-mode .restaurant-logo {
+  display: block;
+  width: 100%;
+  max-height: 17rem;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.3));
+}
+
+.guest-mode .restaurant-kicker {
+  margin: 0 0 0.35rem;
+  color: #ffe9c9;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.guest-mode .hero-title {
+  margin: 0 0 0.8rem;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+  letter-spacing: 0;
+  text-shadow: 0 2px 7px rgba(0, 0, 0, 0.35);
+}
+
+.guest-mode .hero-subtitle {
+  max-width: 32rem;
+  margin: 0 auto 1.05rem;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+  .guest-mode .restaurant-logo {
+    max-height: 13rem;
+  content: '•';
+  margin-right: 1.25rem;
+  color: #f8b35c;
+}
+
+.guest-mode .hero-actions {
+  margin-bottom: 1rem;
+}
+
+.guest-mode .cta-button.primary {
+  min-width: 11rem;
+  padding: 0.85rem 1.35rem;
+  flex-direction: column;
+  gap: 0.1rem;
+  background: var(--restaurant-red);
+  color: #fff;
+  border-radius: 0.55rem;
+  font-size: 0.95rem;
+  line-height: 1.1;
+  text-transform: uppercase;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+.guest-mode .cta-button.primary small {
+  font-size: 0.55rem;
+  font-weight: 700;
+}
+
+.guest-mode .tracking-panel {
+  width: min(19rem, 90vw);
+  margin: 0 auto 0.85rem;
+  padding: 0.65rem 0.75rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 0.55rem;
+  background: rgba(35, 22, 12, 0.38);
+}
+
+.guest-mode .tracking-panel p {
+  margin: 0 0 0.55rem;
+  color: #fff;
+  font-size: 0.7rem;
+}
+
+.guest-mode .track-button,
+.guest-mode .order-via a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.guest-mode .track-button {
+  width: 100%;
+  gap: 0.45rem;
+  padding: 0.45rem;
+  color: #63574b;
+  background: #fffaf2;
+  border-radius: 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.guest-mode .order-via > span,
+.guest-mode .restaurant-contact strong {
+  display: block;
+  color: #fff;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.guest-mode .order-via > div {
+  display: flex;
+  justify-content: center;
+  gap: 0.65rem;
+  margin-top: 0.35rem;
+}
+
+.guest-mode .order-via a {
+  width: 7rem;
+  padding: 0.48rem;
+  background: #fff;
+  border-radius: 0.6rem;
+  color: #ef3f80;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.guest-mode .order-via a:last-child {
+  color: #39b978;
+}
+
+.guest-mode .restaurant-contact {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin-top: 1rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  font-size: 0.7rem;
+}
+
+.guest-mode .restaurant-contact strong {
+  width: 100%;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 0.85rem;
+  text-transform: none;
+}
+
+.guest-mode .features-section,
+.guest-mode .cta-section,
+.guest-mode .home-footer {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .guest-mode .header-content {
+    padding: 0 0.8rem;
+  }
+
+  .guest-mode .header-left app-logo {
+    transform: scale(0.7);
+  }
+
+  .guest-mode .guest-nav {
+    gap: 0.65rem;
+  }
+
+  .guest-mode .guest-nav a {
+    font-size: 0.66rem;
+  }
+
+  .guest-mode .guest-nav a:nth-child(2),
+  .guest-mode .guest-nav a:nth-child(3) {
+    display: none;
+  }
+
+  .guest-mode .hero-section {
+    min-height: calc(100vh - 4.25rem);
+  }
+
+  .guest-mode .restaurant-logo {
+    grid-template-columns: 5rem 1fr;
+    min-height: 5.2rem;
+  }
+
+  .guest-mode .restaurant-logo span {
+    font-size: 3.5rem;
+  }
+
+  .guest-mode .restaurant-logo strong {
+    font-size: 1.45rem;
+  }
+
+  .guest-mode .restaurant-logo em {
+    font-size: 0.72rem;
+  }
+}
+
 /* Responsive adjustments for user menu */
 @media (max-width: 768px) {
   .user-menu {

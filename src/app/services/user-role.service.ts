@@ -26,7 +26,17 @@ export class UserRoleService {
     const defaultRoles = [
       { roleId: 'creator', name: 'Creator', description: 'Full access to all features.' },
       { roleId: 'store_manager', name: 'Store Manager', description: 'Manage stores and products.' },
-      { roleId: 'cashier', name: 'Cashier', description: 'Access POS and products only.' }
+      { roleId: 'cashier', name: 'Cashier', description: 'Access POS and products only.' },
+      { roleId: 'guest', name: 'Guest', description: 'Browse and order without registration.' },
+      { roleId: 'registered_customer', name: 'Registered Customer', description: 'Track orders, favorites, and loyalty points.' },
+      { roleId: 'subscriber', name: 'Subscriber / Loyalty Member', description: 'Receive exclusive deals and rewards.' },
+      { roleId: 'seller', name: 'Seller / Merchant', description: 'Manage product listings, inventory, and pricing.' },
+      { roleId: 'store_owner', name: 'Store Owner', description: 'Oversee operations, reports, and staff.' },
+      { roleId: 'packaging_staff', name: 'Packaging Staff', description: 'Prepare and pack orders.' },
+      { roleId: 'delivery_dispatcher', name: 'Delivery Dispatcher', description: 'Assign orders and optimize routes.' },
+      { roleId: 'delivery_rider', name: 'Delivery Rider / Driver', description: 'Pick up and deliver orders.' },
+      { roleId: 'support_agent', name: 'Support Agent', description: 'Handle inquiries, complaints, and refunds.' },
+      { roleId: 'marketing_manager', name: 'Marketing Manager', description: 'Run promotions and loyalty programs.' }
     ];
     const roleDefRef = collection(this.firestore, 'roledefinition');
     for (const role of defaultRoles) {

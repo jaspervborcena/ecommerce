@@ -100,6 +100,7 @@ export class StorefrontCheckoutComponent {
         total: snapshot.total,
         currency: snapshot.currency,
         storeId: snapshot.storeId,
+        roleId: 'guest',
         status: 'pending'
       };
 
@@ -136,6 +137,7 @@ export class StorefrontCheckoutComponent {
       total: snapshot.total,
       currency: snapshot.currency,
       storeId: snapshot.storeId,
+      roleId: 'guest',
       status: 'pending'
     });
     localStorage.setItem('tovrika-storefront-orders', JSON.stringify(existing.slice(0, 20)));

@@ -57,15 +57,21 @@
 
 /* Logo Styling */
 .auth-logo {
-  width: 64px;
-  height: 64px;
+  width: 72px;
+  height: 72px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 1.5rem;
+  margin: 0 auto 1.25rem;
   box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+}
+
+.auth-logo app-logo {
+  display: block;
+  width: 64px;
+  height: 64px;
 }
 
 .auth-logo svg {
