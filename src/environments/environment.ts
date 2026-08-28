@@ -1,4 +1,4 @@
-// DEVELOPMENT ENVIRONMENT - Uses jasperpos-dev Firebase project
+// DEVELOPMENT ENVIRONMENT - Uses shaotang-74c95 Firebase project
 
 // Dynamic environment detection for web
 let isProd = false;
@@ -24,13 +24,13 @@ export const environment = {
   production: isProd,
   version: '1.0.2',
   firebase: {
-    apiKey: "AIzaSyABpbnPUjr16LnLU8WSJ1BmVvWy0tTmaI4",
-    authDomain: "jasperpos-dev.firebaseapp.com",
-    projectId: "jasperpos-dev",
-    storageBucket: "jasperpos-dev.firebasestorage.app",
-    messagingSenderId: "425012486350",
-    appId: "1:425012486350:web:6a1289e238eb26fb36709f",
-    measurementId: "G-5BLXC1688Z"
+    apiKey: "AIzaSyAD963HrmOflB5FxaBTMhvlXpN737lqCJc",
+    authDomain: "shaotang-74c95.firebaseapp.com",
+    projectId: "shaotang-74c95",
+    storageBucket: "shaotang-74c95.firebasestorage.app",
+    messagingSenderId: "92779471481",
+    appId: "1:92779471481:web:b825c149f7dcec7db8aaa8",
+    measurementId: "G-ZRE0P8WYFM"
   },
   api: {
     baseUrl: "",

@@ -1,13 +1,13 @@
-// PRODUCTION ENVIRONMENT - Uses jasperpos-1dfd5 Firebase project
+// PRODUCTION ENVIRONMENT - Uses shaotang-74c95 Firebase project
 export const environment = {
   production: true,  version: '1.0.2',  firebase: {
-    apiKey: "AIzaSyDNIYovvzNKVj40h99kxOHu5yfEUzx7OYA",
-    authDomain: "jasperpos-1dfd5.firebaseapp.com",
-    projectId: "jasperpos-1dfd5",
-    storageBucket: "jasperpos-1dfd5.firebasestorage.app",
-    messagingSenderId: "251258556341",
-    appId: "1:251258556341:web:28cdcafbdb4ad89675d3fc",
-    measurementId: "G-MG8T2RZ051"
+    apiKey: "AIzaSyAD963HrmOflB5FxaBTMhvlXpN737lqCJc",
+    authDomain: "shaotang-74c95.firebaseapp.com",
+    projectId: "shaotang-74c95",
+    storageBucket: "shaotang-74c95.firebasestorage.app",
+    messagingSenderId: "92779471481",
+    appId: "1:92779471481:web:b825c149f7dcec7db8aaa8",
+    measurementId: "G-ZRE0P8WYFM"
   },
   api: {
     // Disabled in frontend; production builds should avoid calling Cloud Functions from the UI directly.
