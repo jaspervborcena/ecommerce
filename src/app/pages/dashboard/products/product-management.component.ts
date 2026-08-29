@@ -212,6 +212,100 @@ import * as XLSX from 'xlsx';
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
+    .product-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .product-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .product-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 22px rgba(15, 23, 42, 0.1);
+    }
+
+    .product-card-image {
+      width: 100%;
+      height: 170px;
+      object-fit: cover;
+      background: #f8fafc;
+    }
+
+    .product-card-body {
+      padding: 1rem;
+    }
+
+    .product-card-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 0.35rem 0;
+    }
+
+    .product-card-category {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: #eef2ff;
+      color: #4338ca;
+      border-radius: 999px;
+      padding: 0.35rem 0.6rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .product-card-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      color: #475569;
+      font-size: 0.82rem;
+    }
+
+    .product-card-price {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0.75rem 0 0.25rem 0;
+    }
+
+    .product-card-stock {
+      font-size: 0.82rem;
+      color: #475569;
+    }
+
+    .product-card-actions {
+      margin-top: 1rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .product-card-button {
+      flex: 1;
+      border: none;
+      border-radius: 10px;
+      padding: 0.7rem 0.8rem;
+      font-weight: 600;
+      color: white;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      cursor: pointer;
+    }
+
+    .product-card-button.secondary {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+
     .products-table {
       width: 100%;
       border-collapse: collapse;
@@ -1313,7 +1407,7 @@ import * as XLSX from 'xlsx';
         </div>
       </div>
 
-      <!-- Products Table -->
+      <!-- Products Cards -->
       <div class="table-container">
         <div class="table-header">
           <h3>Products ({{ getDisplayProductCount() }})</h3>
@@ -1326,25 +1420,56 @@ import * as XLSX from 'xlsx';
           </button>
         </div>
 
-        <div class="table-wrapper" *ngIf="filteredProducts().length > 0">
-          <table class="products-table">
-            <thead>
-              <tr>
-                <th>Image</th>
-                <th>Product Code</th>
-                <th>Product Name</th>
-                <th>SKU</th>
-                <th>Category</th>
-                <th>Tags</th>
-                <th>Stock</th>
-                <th>Price</th>
-                <th>Tracked</th>
-                <th>VAT</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div *ngIf="filteredProducts().length > 0" class="product-cards-grid">
+          <article *ngFor="let product of getPaginatedProducts()" class="product-card">
+            <img class="product-card-image" [src]="product.imageUrl || 'assets/noimage.png'" [alt]="product.productName || 'Product image'" />
+
+            <div class="product-card-body">
+              <div class="product-card-category">{{ product.category || 'Uncategorized' }}</div>
+              <h4 class="product-card-name">{{ product.productName }}</h4>
+
+              <div class="product-card-meta">
+                <span>SKU: {{ product.skuId || '-' }}</span>
+                <span>{{ product.totalStock || 0 }} in stock</span>
+              </div>
+
+              <div class="product-card-price">₱{{ displayPrice(product).toFixed(2) }}</div>
+              <div class="product-card-stock">
+                {{ isProductTracked(product) ? 'Inventory tracked' : 'Not tracked' }}
+              </div>
+
+              <div class="product-card-actions">
+                <button type="button" class="product-card-button secondary" (click)="openEditModal(product)">View</button>
+                <button type="button" class="product-card-button" (click)="openEditModal(product)">Add</button>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div *ngIf="filteredProducts().length === 0" class="empty-state" style="background:white; border:1px solid #e2e8f0; border-radius:16px; padding:2rem; text-align:center; color:#475569;">
+          No products found for the selected store.
+        </div>
+      </div>
+
+      <div class="table-wrapper" *ngIf="false">
+        <table class="products-table">
+          <thead>
+            <tr>
+              <th>Image</th>
+              <th>Product Code</th>
+              <th>Product Name</th>
+              <th>SKU</th>
+              <th>Category</th>
+              <th>Tags</th>
+              <th>Stock</th>
+              <th>Price</th>
+              <th>Tracked</th>
+              <th>VAT</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
               <tr *ngFor="let product of getPaginatedProducts()">
                 <td class="product-img-cell">
                   <img 
@@ -2550,7 +2675,6 @@ import * as XLSX from 'xlsx';
           </ng-container>
         </div>
       </div>
-    </div>
   `
 })
 export class ProductManagementComponent implements OnInit {

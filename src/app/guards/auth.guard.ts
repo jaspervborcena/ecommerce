@@ -16,28 +16,29 @@ export const authGuard: CanActivateFn = (route, state) => {
   const currentUser = authService.currentUser();
   const currentPermission = authService.getCurrentPermission();
 
-  const isVisitor = !currentPermission?.companyId || currentPermission.roleId === 'visitor';
+  const isOnboarding = !currentPermission?.companyId || currentPermission.roleId === 'visitor' || currentPermission.roleId === 'customer';
   const isCompanyProfileRoute = state.url.includes('/dashboard/company-profile');
+  const isBranchesRoute = state.url.includes('/dashboard/branches');
   const isOnboardingRoute = state.url === '/onboarding';
 
-  // ✅ Allow visitors to access onboarding and company-profile
-  if (isVisitor) {
-    if (isOnboardingRoute || isCompanyProfileRoute) {
-      console.log('🛡️ AuthGuard: Visitor accessing allowed setup route - allowing');
+  // ✅ Allow onboarding users (visitor/customer without companyId) to access setup routes
+  if (isOnboarding) {
+    if (isOnboardingRoute || isCompanyProfileRoute || isBranchesRoute) {
+      console.log('🛡️ AuthGuard: Onboarding user accessing allowed setup route - allowing');
       return true;
     }
-    console.warn('🛡️ AuthGuard: Visitor blocked from protected route, redirecting to onboarding');
+    console.warn('🛡️ AuthGuard: Onboarding user blocked from protected route, redirecting to onboarding');
     router.navigate(['/onboarding']);
     return false;
   }
 
-  // ✅ Allow access to company-profile if user has no companyId (onboarding)
-  if (!currentPermission?.companyId && isCompanyProfileRoute) {
-    console.log('🛡️ AuthGuard: No companyId but accessing company-profile - allowing');
+  // ✅ Allow access to company-profile and branches if user has no companyId (onboarding)
+  if (!currentPermission?.companyId && (isCompanyProfileRoute || isBranchesRoute)) {
+    console.log('🛡️ AuthGuard: No companyId but accessing allowed onboarding route - allowing');
     return true;
   }
 
-  // 🚫 Block access if no companyId and not on company-profile
+  // 🚫 Block access if no companyId and not on company-profile/branches
   if (!currentPermission?.companyId) {
     console.warn(`🛡️ AuthGuard: Missing companyId for ${state.url}, redirecting to company-profile`);
     router.navigate(['/dashboard/company-profile']);

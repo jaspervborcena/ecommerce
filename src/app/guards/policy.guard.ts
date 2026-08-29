@@ -35,21 +35,22 @@ export const policyGuard: CanActivateFn = async (route, state) => {
     console.warn('🛡️ PolicyGuard: Error checking acceptance flags, falling back to existing checks', e);
   }
 
-  // Check if user is a visitor based on current permission (more reliable than user.roleId)
+  // Check if user is in onboarding phase (no companyId yet, or visitor/customer role)
   const currentPermission = authService.getCurrentPermission();
-  const isVisitor = !currentPermission || 
-                   !currentPermission.companyId || 
-                   currentPermission.companyId.trim() === '' || 
-                   currentPermission.roleId === 'visitor';
+  const isOnboarding = !currentPermission || 
+                       !currentPermission.companyId || 
+                       currentPermission.companyId.trim() === '' || 
+                       currentPermission.roleId === 'visitor' ||
+                       currentPermission.roleId === 'customer';
 
-  // Allow visitors to access company profile for initial setup
-  if (isVisitor && state.url.includes('/dashboard/company-profile')) {
-    console.log('🛡️ PolicyGuard: Visitor accessing company profile for setup - allowing');
+  // Allow onboarding users to access company profile and branches for initial setup
+  if (isOnboarding && (state.url.includes('/dashboard/company-profile') || state.url.includes('/dashboard/branches'))) {
+    console.log('🛡️ PolicyGuard: Onboarding user accessing allowed setup route - allowing');
     return true;
   }
 
-  if (isVisitor) {
-    console.log('🛡️ PolicyGuard: Visitor user attempting to access protected route, blocking (onboarding-only)');
+  if (isOnboarding) {
+    console.log('🛡️ PolicyGuard: Onboarding user attempting to access protected route, blocking (setup-only)');
     return false;
   }
 

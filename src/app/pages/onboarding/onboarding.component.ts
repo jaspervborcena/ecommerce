@@ -5,6 +5,7 @@ import { AuthService } from '../../services/auth.service';
 import { LogoComponent } from '../../shared/components/logo/logo.component';
 import { AppConstants } from '../../shared/enums';
 import { NetworkService } from '../../core/services/network.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-onboarding',
@@ -31,6 +32,109 @@ export class OnboardingComponent {
   readonly headerClass = computed(() => 
     this.isOnline() ? 'home-header' : 'home-header offline'
   );
+  showPickupSchedule = false;
+  scheduleForLater = false;
+  pickupDate = '';
+  showBranchSelection = false;
+  availableBranches: Array<{
+    id: string;
+    branchName: string;
+    address: string;
+    status: 'active' | 'inactive' | 'suspended';
+    storeHours: string;
+  }> = [];
+  selectedBranchId = '';
+
+  continueToPickup() {
+    this.showPickupSchedule = true;
+  }
+
+  backToOrderInformation() {
+    this.showPickupSchedule = false;
+    this.showBranchSelection = false;
+    this.scheduleForLater = false;
+  }
+
+  selectScheduleOption(scheduleForLater: boolean) {
+    this.scheduleForLater = scheduleForLater;
+  }
+
+  private formatBranchAddress(branchData: Record<string, any>): string {
+    const address = branchData?.['address'];
+    if (address && typeof address === 'object') {
+      const parts = [
+        address['street'] || address['addressLine1'] || address['line1'],
+        address['city'],
+        address['state'],
+        address['zipCode'] || address['postalCode'] || address['zip'],
+        address['country']
+      ].filter(Boolean);
+
+      if (parts.length) {
+        return parts.join(', ');
+      }
+    }
+
+    const fallbackParts = [
+      branchData?.['streetAddress'] || branchData?.['addressLine1'] || branchData?.['address1'],
+      branchData?.['city'],
+      branchData?.['state'],
+      branchData?.['zipCode'] || branchData?.['postalCode'] || branchData?.['zip'],
+      branchData?.['country']
+    ].filter(Boolean);
+
+    if (fallbackParts.length) {
+      return fallbackParts.join(', ');
+    }
+
+    return branchData?.['address'] || branchData?.['location'] || 'Address unavailable';
+  }
+
+  private formatBranchHours(branchData: Record<string, any>): string {
+    const operatingHours = branchData?.['settings']?.['operatingHours'];
+    if (Array.isArray(operatingHours) && operatingHours.length) {
+      const openHours = operatingHours.filter((slot: any) => slot?.['isOpen'] && slot?.['openTime'] && slot?.['closeTime']);
+      if (openHours.length) {
+        const first = openHours[0];
+        return `${first['openTime']} - ${first['closeTime']}`;
+      }
+    }
+
+    const hours = branchData?.['storeHours'] || branchData?.['businessHours'] || branchData?.['openingHours'] || branchData?.['hours'];
+    if (hours) {
+      return String(hours);
+    }
+
+    return '24 Hours';
+  }
+
+  continueToSelectBranch() {
+    this.router.navigate(['/dashboard/branches']);
+  }
+
+  selectBranch(branchId: string) {
+    this.selectedBranchId = branchId;
+    this.router.navigate(['/dashboard/products']);
+  }
+
+  openDatePicker(datePicker: HTMLInputElement) {
+    if (typeof datePicker.showPicker === 'function') {
+      datePicker.showPicker();
+    } else {
+      datePicker.click();
+    }
+  }
+
+  setPickupDate(event: Event) {
+    const date = (event.target as HTMLInputElement).value;
+    if (!date) {
+      this.pickupDate = '';
+      return;
+    }
+
+    const [year, month, day] = date.split('-');
+    this.pickupDate = `${month}/${day}/${year}`;
+  }
 
   navigateToDashboard() {
     const role = this.userRole();

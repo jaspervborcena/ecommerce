@@ -71,6 +71,18 @@ export const roleGuard: CanActivateFn = async (route, state) => {
   const roleId = normalizeRole(roleIdRaw);
   const normalizedRequired = requiredRoles.map(normalizeRole);
 
+  // ✅ Quick exit: if role is already in allowed list, allow immediately
+  if (normalizedRequired.includes(roleId)) {
+    return true;
+  }
+
+  // 🚫 If role not allowed and is onboarding user (visitor/customer), redirect to onboarding
+  if (roleId === 'visitor' || roleId === 'customer') {
+    console.warn(`🛡️ RoleGuard: Onboarding user (${roleId}) not allowed on ${state.url}`);
+    router.navigate(['/onboarding']);
+    return false;
+  }
+
   const isAdminCollectionUser = async (): Promise<boolean> => {
     try {
       const collectionNames = ['admin', 'admins'];
@@ -112,10 +124,6 @@ export const roleGuard: CanActivateFn = async (route, state) => {
     return true;
   }
 
-  if (normalizedRequired.includes(roleId)) {
-    return true;
-  }
-
   // Redirect based on role
   switch (roleId) {
     case 'cashier':
@@ -124,9 +132,6 @@ export const roleGuard: CanActivateFn = async (route, state) => {
     case 'creator':
     case 'store_manager':
       router.navigate(['/dashboard']);
-      break;
-    case 'visitor':
-      router.navigate(['/onboarding']);
       break;
     default:
       router.navigate(['/dashboard/overview']);

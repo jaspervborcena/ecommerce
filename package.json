@@ -1,6 +1,6 @@
 {
-  "name": "pos-system",
-  "version": "1.0.2",
+  "name": "shao-tang",
+  "version": "1.0.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve --proxy-config proxy.conf.dev.json",

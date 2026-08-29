@@ -261,7 +261,7 @@ export const routes: Routes = [
   path: 'branches',
   loadComponent: () => import('./pages/dashboard/branches/branches.component').then(m => m.BranchesComponent),
   canActivate: [onboardingGuard, roleGuard],
-  data: { roles: ['creator', 'store_manager', 'admin'] }
+  data: { roles: ['creator', 'store_manager', 'admin', 'visitor', 'customer'] }
       },
       {
   path: 'access',

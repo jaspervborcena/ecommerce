@@ -25,7 +25,7 @@ export const appConfig: ApplicationConfig = {
     // Translation module
     importProvidersFrom(
       TranslateModule.forRoot({
-        defaultLanguage: 'en'
+        fallbackLang: 'en'
       })
     ),
     provideFirebaseApp(() => {

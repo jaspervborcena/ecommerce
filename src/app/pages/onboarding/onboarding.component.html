@@ -37,13 +37,13 @@
         <!-- User menu when authenticated -->
         <div *ngIf="isAuthenticated(); else guestMenu" class="user-menu">
           <div class="user-info">
-            <span class="user-name">{{ currentUser()?.displayName || currentUser()?.email }}</span>
+            <span class="user-name">{{ (currentUser()?.displayName || currentUser()?.email) | titlecase }}</span>
             <span class="user-role">{{ userRole() }}</span>
           </div>
           
           <!-- Visitor welcome message -->
           <div *ngIf="isVisitorUser()" class="visitor-welcome">
-            <span class="welcome-text">Welcome! You're browsing as a visitor.</span>
+            <span class="welcome-text">Welcome {{ (currentUser()?.displayName || currentUser()?.email) | titlecase }}!</span>
           </div>
           
           <button (click)="logout()" class="logout-btn">
@@ -67,81 +67,133 @@
     </div>
   </header>
 
-  <!-- Main Content Area -->
-  <div class="home-content">
-    <!-- Onboarding Hero Section -->
-    <section class="hero-section">
-      <div class="hero-container">
-        <div class="hero-content">
-          <h2 class="hero-title">
-            <span class="block">Welcome to Tovrika!</span>
-          </h2>
-          <p class="hero-subtitle" *ngIf="isVisitorUser()">
-            You are currently signed in as a <strong>Visitor</strong>. Choose your path — create a store or join an existing one.
-          </p>
-          <p class="hero-subtitle" *ngIf="!isVisitorUser()">
-            Welcome back! You can continue to your dashboard or explore other features.
-          </p>
-          
-          <!-- Path Selection -->
-          <div class="path-selection">
-            <!-- Create Store Path -->
-            <div class="path-card">
-              <div class="path-icon create-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-              </div>
-              <h3 class="path-title">Create a Store</h3>
-              <p class="path-description">
-                Start your own store to sell to customers and manage your business.
-              </p>
-              <ul class="path-features">
-                <li>✓ Create a store profile</li>
-                <li>✓ Add products</li>
-                <li>✓ Invite and manage staff</li>
-                <li>✓ View sales reports</li>
-              </ul>
-              <button (click)="navigateToCreateStore()" class="cta-button primary">
-                Start my store
-              </button>
-            </div>
+  <main class="order-page" *ngIf="!showPickupSchedule">
+    <section class="order-hero" aria-labelledby="order-title">
+      <div class="hero-copy">
+        <p class="eyebrow">Shao Tang</p>
+        <h1 id="order-title">Order Information</h1>
+        <p class="hero-intro">Enjoy your Shao Tang favorites your way.</p>
+      </div>
+      <img class="hero-logo" src="assets/shao_tang_logo.png" alt="Shao Tang">
+    </section>
 
-            <!-- Join Store Path -->
-            <div class="path-card">
-              <div class="path-icon join-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-              <h3 class="path-title">Join a Store</h3>
-              <p class="path-description">
-                Join an existing store as a cashier, manager, or staff member.
-              </p>
-              <ul class="path-features">
-                <li>✓ Operate the POS as a cashier</li>
-                <li>✓ Manage inventory</li>
-                <li>✓ Interact with customers</li>
-                <li>✓ Learn business operations</li>
-              </ul>
-              <button (click)="navigateToJoinStore()" class="cta-button primary">
-                Join a store
-              </button>
-            </div>
-          </div>
+    <section class="order-content" aria-labelledby="pickup-title">
+      <div class="pickup-panel">
+        <p class="section-kicker">Pickup orders</p>
+        <h2 id="pickup-title">Pick-Up Order</h2>
+        <p>You’ll be responsible for collecting your order directly from the branch.<br>If you prefer, you may also arrange delivery through a third-party courier service such as:</p>
+        <ul class="service-list">
+          <li><strong>Grab Express</strong></li>
+          <li><strong>Angkas Padala</strong></li>
+          <li><strong>Move It Express</strong></li>
+        </ul>
+        <button type="button" class="pickup-button" (click)="continueToPickup()">Continue with Pick Up <span aria-hidden="true">&#8594;</span></button>
+      </div>
 
-          <!-- Info Section -->
-          <div class="info-section">
-            <div class="info-card">
-              <h4>Not sure yet?</h4>
-              <p>No problem — feel free to explore Tovrika's features before deciding.</p>
-              <a routerLink="/" class="explore-link">
-                Back to Homepage →
-              </a>
-            </div>
-          </div>
+      <div class="delivery-panel" aria-labelledby="delivery-title">
+        <p class="section-kicker">Delivered to you</p>
+        <h2 id="delivery-title">Want Delivery Instead?</h2>
+        <p>Enjoy hassle-free service and have your order brought straight to your doorstep.<br>Place your order through our trusted delivery partners:</p>
+        <div class="partner-links">
+          <a href="https://www.foodpanda.ph/" target="_blank" rel="noopener noreferrer" aria-label="Order via FoodPanda">
+            <img src="https://axpancitconlechon.com/assets/foodpanda-logo-ZogZlWFO.png" alt="FoodPanda">
+          </a>
+          <a href="https://food.grab.com/ph/en/" target="_blank" rel="noopener noreferrer" aria-label="Order via GrabFood">
+            <img src="https://axpancitconlechon.com/assets/grab-logo-DhyRUeMt.png" alt="GrabFood">
+          </a>
         </div>
       </div>
     </section>
-  </div>
+  </main>
+
+  <main class="schedule-page" *ngIf="showPickupSchedule && !showBranchSelection">
+    <section class="schedule-card" aria-labelledby="schedule-title">
+      <button type="button" class="back-button" (click)="backToOrderInformation()" aria-label="Back to order information">
+        <span aria-hidden="true">&#8592;</span> Back
+      </button>
+      <p class="section-kicker">Pickup order</p>
+      <h1 id="schedule-title">Schedule Your Pick Up</h1>
+      <p class="schedule-intro">Choose when you'd like to pick up your order</p>
+
+      <div class="schedule-options">
+        <button type="button" class="schedule-option" [class.selected]="!scheduleForLater" (click)="selectScheduleOption(false)">
+          <span class="option-icon" aria-hidden="true">&#9889;</span>
+          <span>
+            <strong>ASAP</strong>
+            <small>Pick up as soon as possible (15-30 minutes)</small>
+          </span>
+          <span class="option-check" aria-hidden="true" *ngIf="!scheduleForLater">&#10003;</span>
+        </button>
+        <button type="button" class="schedule-option" [class.selected]="scheduleForLater" (click)="selectScheduleOption(true)">
+          <span class="option-icon" aria-hidden="true">&#128197;</span>
+          <span>
+            <strong>Schedule for Later</strong>
+            <small>Choose a specific date and time</small>
+          </span>
+          <span class="option-check" aria-hidden="true" *ngIf="scheduleForLater">&#10003;</span>
+        </button>
+      </div>
+
+      <div class="later-fields" *ngIf="scheduleForLater">
+        <label for="pickup-date">Select Date</label>
+        <div class="date-input-wrap">
+          <input id="pickup-date" type="text" [value]="pickupDate" placeholder="mm/dd/yyyy" aria-label="Date in mm/dd/yyyy format" readonly>
+          <span class="date-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <rect x="3" y="4" width="18" height="17" rx="2" stroke-width="2" />
+              <path d="M16 2v4M8 2v4M3 10h18" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          </span>
+          <input #pickupDatePicker class="native-date-picker" type="date" aria-label="Choose pickup date" (change)="setPickupDate($event)">
+        </div>
+        <label for="pickup-time">Select Time</label>
+        <input id="pickup-time" type="time" placeholder="Pick a time">
+        <p>Only branches open at your chosen time will be shown.</p>
+      </div>
+
+      <button type="button" class="schedule-button" (click)="continueToSelectBranch()">Continue to Select Branch <span aria-hidden="true">&#8594;</span></button>
+    </section>
+  </main>
+
+  <main class="schedule-page" *ngIf="showBranchSelection">
+    <section class="schedule-card branch-card" aria-labelledby="branch-title">
+      <button type="button" class="back-button" (click)="showBranchSelection = false" aria-label="Back to pickup schedule">
+        <span aria-hidden="true">&#8592;</span> Back
+      </button>
+      <p class="section-kicker">Available locations</p>
+      <h1 id="branch-title">Select Branch</h1>
+      <p class="schedule-intro">Choose a store and branch for your pickup.</p>
+
+      <div class="branch-grid" *ngIf="availableBranches.length > 0; else noStores">
+        <article class="branch-card-item" *ngFor="let branch of availableBranches" [class.selected]="selectedBranchId === branch.id">
+          <div class="branch-header">
+            <h2>{{ branch.branchName }}</h2>
+            <span class="status-badge" [class.open]="branch.status === 'active'" [class.closed]="branch.status !== 'active'">
+              {{ branch.status === 'active' ? 'Open' : 'Closed' }}
+            </span>
+          </div>
+
+          <div class="branch-address">
+            <span class="location-pin" aria-hidden="true">◉</span>
+            <span>{{ branch.address }}</span>
+          </div>
+
+          <button type="button" class="text-link">See more</button>
+
+          <div class="branch-hours">
+            <span class="hours-icon" aria-hidden="true">◔</span>
+            <span>{{ branch.storeHours }}</span>
+          </div>
+
+          <button type="button" class="select-branch-button" (click)="selectBranch(branch.id)">
+            {{ selectedBranchId === branch.id ? 'Selected' : 'Select' }}
+          </button>
+        </article>
+      </div>
+      <ng-template #noStores>
+        <p class="empty-branches">No active branches are available right now.</p>
+      </ng-template>
+
+    </section>
+  </main>
 </div>

@@ -1,6 +1,9 @@
 // PRODUCTION ENVIRONMENT - Uses shaotang-74c95 Firebase project
 export const environment = {
-  production: true,  version: '1.0.2',  firebase: {
+  production: true,
+  version: '1.0.2',
+  defaultCompanyId: 'kTAtjOEjwrrzdneego2o',
+  firebase: {
     apiKey: "AIzaSyAD963HrmOflB5FxaBTMhvlXpN737lqCJc",
     authDomain: "shaotang-74c95.firebaseapp.com",
     projectId: "shaotang-74c95",

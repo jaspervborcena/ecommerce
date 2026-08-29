@@ -23,6 +23,7 @@ if (typeof window !== 'undefined' && window.location && window.location.hostname
 export const environment = {
   production: isProd,
   version: '1.0.2',
+  defaultCompanyId: 'kTAtjOEjwrrzdneego2o',
   firebase: {
     apiKey: "AIzaSyAD963HrmOflB5FxaBTMhvlXpN737lqCJc",
     authDomain: "shaotang-74c95.firebaseapp.com",
