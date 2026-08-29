@@ -33,7 +33,7 @@ export const onboardingGuard: CanActivateFn = async (route, state) => {
   // Step 1: Check company profile - but allow branches during onboarding
   if (!currentPermission?.companyId) {
     // Allow branches and company-profile routes during onboarding
-    if (state.url.includes('/dashboard/branches') || state.url.includes('/dashboard/company-profile')) {
+    if (state.url.includes('/branches') || state.url.includes('/dashboard/company-profile')) {
       return true;
     }
     router.navigate(['/dashboard/company-profile']);

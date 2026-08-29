@@ -18,7 +18,7 @@ export const authGuard: CanActivateFn = (route, state) => {
 
   const isOnboarding = !currentPermission?.companyId || currentPermission.roleId === 'visitor' || currentPermission.roleId === 'customer';
   const isCompanyProfileRoute = state.url.includes('/dashboard/company-profile');
-  const isBranchesRoute = state.url.includes('/dashboard/branches');
+  const isBranchesRoute = state.url.includes('/branches');
   const isOnboardingRoute = state.url === '/onboarding';
 
   // ✅ Allow onboarding users (visitor/customer without companyId) to access setup routes

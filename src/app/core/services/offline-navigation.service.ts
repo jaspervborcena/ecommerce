@@ -22,7 +22,7 @@ export class OfflineNavigationService {
   private offlineFallbackRoutes: { [key: string]: string } = {
     '/dashboard/products': '/dashboard',
     '/dashboard/stores': '/dashboard',
-    '/dashboard/branches': '/dashboard',
+    '/branches': '/dashboard',
     '/dashboard/access': '/dashboard',
     '/dashboard/user-roles': '/dashboard',
     '/dashboard/invoice-setup': '/dashboard',

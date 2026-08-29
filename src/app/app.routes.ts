@@ -1,81 +1,14 @@
-
-
-import { Routes, Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
-import { inject } from '@angular/core';
-import { authGuard } from './guards/auth.guard';
-import { onboardingGuard, companyProfileGuard } from './guards/onboarding.guard';
-import { policyGuard } from './guards/policy.guard';
-import { visitorGuard } from './guards/visitor.guard';
-import { AuthService } from './services/auth.service';
-import { roleGuard } from './guards/role.guard';
+import { Routes } from '@angular/router';
 
 export const routes: Routes = [
-    {
-      path: 'forgot-password',
-      loadComponent: () => import('./pages/auth/forgot-password/forgot-password.component').then(m => m.ForgotPasswordComponent)
-    },
-  // Public Routes - but visitors should go to onboarding
+  {
+    path: 'forgot-password',
+    loadComponent: () => import('./pages/auth/forgot-password/forgot-password.component').then(m => m.ForgotPasswordComponent)
+  },
   {
     path: '',
-    loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent),
-    canActivate: [async (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => {
-      const authService = inject(AuthService);
-      const router = inject(Router);
-      
-      // Wait for Firebase auth state to be restored (max 3 seconds)
-      let attempts = 0;
-      const maxAttempts = 30; // 3 seconds (30 * 100ms)
-      
-      while (authService['isLoading']() && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-      }
-      
-      console.log('🏠 Root Guard: Auth state loaded after', attempts * 100, 'ms');
-      
-      // If user is authenticated, check where they should be redirected
-      if (authService.isAuthenticated()) {
-        const currentUser = authService.getCurrentUser();
-        const currentPermission = authService.getCurrentPermission();
-        const rememberMe = localStorage.getItem('rememberMe') === 'true';
-        
-        console.log('🏠 Root Guard: Authenticated user detected', {
-          email: currentUser?.email,
-          rememberMe,
-          hasPermission: !!currentPermission,
-          hasCompanyId: !!currentPermission?.companyId
-        });
-        
-        const isVisitor = !currentPermission || 
-                         !currentPermission.companyId || 
-                         currentPermission.companyId.trim() === '' || 
-                         currentPermission.roleId === 'visitor';
-        
-        // If remember me is enabled and user is authenticated, redirect to appropriate page
-        if (rememberMe) {
-          if (isVisitor) {
-            console.log('🏠 Root Guard: Visitor with remember me - redirecting to onboarding');
-            router.navigate(['/onboarding']);
-            return false;
-          } else {
-            console.log('🏠 Root Guard: User with remember me - redirecting to dashboard');
-            router.navigate(['/dashboard']);
-            return false;
-          }
-        }
-        
-        // If not remember me but is visitor, go to onboarding
-        if (isVisitor) {
-          console.log('🏠 Root Guard: Visitor without remember me - redirecting to onboarding');
-          router.navigate(['/onboarding']);
-          return false;
-        }
-      }
-      
-      return true;
-    }]
+    loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent)
   },
-  // Public storefront routes (Phase 1)
   {
     path: 'store/:storeId',
     loadComponent: () => import('./pages/storefront/storefront-list.component').then(m => m.StorefrontListComponent)
@@ -94,43 +27,7 @@ export const routes: Routes = [
   },
   {
     path: 'login',
-    loadComponent: () => import('./pages/auth/login/login.component').then(m => m.LoginComponent),
-    canActivate: [async (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => {
-      const authService = inject(AuthService);
-      const router = inject(Router);
-      
-      // Wait for Firebase auth state to be restored (max 3 seconds)
-      let attempts = 0;
-      const maxAttempts = 30; // 3 seconds (30 * 100ms)
-      
-      while (authService['isLoading']() && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-      }
-      
-      // If user is already authenticated with remember me, redirect them
-      if (authService.isAuthenticated()) {
-        const currentUser = authService.getCurrentUser();
-        const currentPermission = authService.getCurrentPermission();
-        const rememberMe = localStorage.getItem('rememberMe') === 'true';
-        
-        if (rememberMe) {
-          const isVisitor = !currentPermission || 
-                           !currentPermission.companyId || 
-                           currentPermission.companyId.trim() === '' || 
-                           currentPermission.roleId === 'visitor';
-          
-          if (isVisitor) {
-            router.navigate(['/onboarding']);
-          } else {
-            router.navigate(['/dashboard']);
-          }
-          return false;
-        }
-      }
-      
-      return true;
-    }]
+    loadComponent: () => import('./pages/auth/login/login.component').then(m => m.LoginComponent)
   },
   {
     path: 'register',
@@ -146,8 +43,15 @@ export const routes: Routes = [
   },
   {
     path: 'onboarding',
-    loadComponent: () => import('./pages/onboarding/onboarding.component').then(m => m.OnboardingComponent),
-    canActivate: [authGuard, visitorGuard]
+    loadComponent: () => import('./pages/onboarding/onboarding.component').then(m => m.OnboardingComponent)
+  },
+  {
+    path: 'branches',
+    loadComponent: () => import('./pages/dashboard/branches/branches.component').then(m => m.BranchesComponent)
+  },
+  {
+    path: 'product-listing',
+    loadComponent: () => import('./pages/product-listing/product-listing.component').then(m => m.ProductListingComponent)
   },
   {
     path: 'join-store',
@@ -155,18 +59,10 @@ export const routes: Routes = [
   },
   {
     path: 'policy-agreement',
-    // Remove authGuard to prevent circular dependencies during chunk errors
-    loadComponent: () => import('./pages/auth/policy-agreement/policy-agreement.component')
-      .then(m => m.PolicyAgreementComponent)
-      .catch(error => {
-        console.warn('🔄 Policy agreement component failed to load, triggering reload:', error);
-        setTimeout(() => window.location.reload(), 100);
-        throw error;
-      })
+    loadComponent: () => import('./pages/auth/policy-agreement/policy-agreement.component').then(m => m.PolicyAgreementComponent)
   },
   {
     path: 'company-selection',
-    canActivate: [authGuard, policyGuard],
     loadComponent: () => import('./pages/company-selection/company-selection.component').then(m => m.CompanySelectionComponent)
   },
   {
@@ -185,20 +81,14 @@ export const routes: Routes = [
     path: 'print-setup',
     loadComponent: () => import('./pages/print-setup/print-setup.component').then(m => m.PrintSetupComponent)
   },
-  
-  // Import Utility Route (admin use only)
   {
     path: 'import',
     loadComponent: () => import('./pages/import/import.component').then(m => m.ImportComponent)
   },
-  
-  // Customer Display Route (no authentication needed)
   {
     path: 'customer-view/:sessionId',
     loadComponent: () => import('./pages/customer-view/customer-view.component').then(m => m.CustomerViewComponent)
   },
-  
-  // Feature Detail Routes (public marketing pages)
   {
     path: 'features/inventory',
     loadComponent: () => import('./pages/features/inventory/feature-inventory.component').then(m => m.FeatureInventoryComponent)
@@ -219,116 +109,31 @@ export const routes: Routes = [
     path: 'features/cloudsync',
     loadComponent: () => import('./pages/features/cloudsync/feature-cloudsync.component').then(m => m.FeatureCloudSyncComponent)
   },
-  
-
-  // Protected Routes - Main Dashboard
   {
     path: 'dashboard',
     loadComponent: () => import('./pages/dashboard/dashboard.component').then(m => m.DashboardComponent),
-    // Simplify parent guards; use roleGuard on children where roles are specified
-    canActivate: [authGuard, policyGuard],
     children: [
-      {
-        path: '',
-        redirectTo: 'overview',
-        pathMatch: 'full'
-      },
-      {
-        path: 'company-profile',
-        loadComponent: () => import('./pages/dashboard/company-profile/company-profile.component').then(m => m.CompanyProfileComponent),
-        canActivate: [companyProfileGuard]
-      },
-      // Routes requiring onboarding completion
-      {
-  path: 'overview',
-  loadComponent: () => import('./pages/dashboard/overview/overview.component').then(m => m.OverviewComponent),
-  canActivate: [onboardingGuard, roleGuard],
-  data: { roles: ['creator', 'store_manager', 'admin'] }
-      },
-        {
-      path: 'storefront-settings',
-      loadComponent: () => import('./pages/dashboard/storefront/storefront-settings.component').then(m => m.StorefrontSettingsComponent),
-      canActivate: [onboardingGuard, roleGuard],
-      data: { roles: ['creator', 'store_manager', 'admin'] }
-        },
-      {
-  path: 'stores',
-  loadComponent: () => import('./pages/dashboard/stores-management/stores-management.component').then(m => m.StoresManagementComponent),
-  canActivate: [onboardingGuard, roleGuard],
-  data: { roles: ['creator', 'store_manager', 'admin'] }
-      },
-      {
-  path: 'branches',
-  loadComponent: () => import('./pages/dashboard/branches/branches.component').then(m => m.BranchesComponent),
-  canActivate: [onboardingGuard, roleGuard],
-  data: { roles: ['creator', 'store_manager', 'admin', 'visitor', 'customer'] }
-      },
-      {
-  path: 'access',
-  loadComponent: () => import('./pages/dashboard/access/access.component').then(m => m.AccessComponent)
-      },
-      {
-  path: 'user-roles',
-  loadComponent: () => import('./pages/dashboard/user-roles/user-roles.component').then(m => m.UserRolesComponent)
-      },
-      {
-  path: 'subscriptions',
-  loadComponent: () => import('./pages/dashboard/subscriptions/subscriptions.component').then(m => m.SubscriptionsComponent),
-  canActivate: [onboardingGuard, roleGuard],
-  data: { roles: ['creator', 'admin'] }
-      },
-      {
-  path: 'admin',
-  loadComponent: () => import('./pages/dashboard/admin/admin.component').then(m => m.AdminComponent),
-  canActivate: [onboardingGuard, roleGuard],
-  data: { roles: ['admin'] }
-      },
-      {
-  path: 'invoice-setup',
-  loadComponent: () => import('./pages/dashboard/invoice-setup/invoice-setup.component').then(m => m.InvoiceSetupComponent),
-  canActivate: [roleGuard],
-  data: { roles: ['creator', 'store_manager', 'admin'] }
-      },
-      {
-  path: 'products',
-  loadComponent: () => import('./pages/dashboard/products/product-management.component').then(m => m.ProductManagementComponent),
-  canActivate: [onboardingGuard, roleGuard],
-  data: { roles: ['creator', 'store_manager', 'admin'] }
-      },
-        {
-      path: 'inventory',
-      loadComponent: () => import('./pages/inventory/inventory.component').then(m => m.InventoryComponent),
-      canActivate: [onboardingGuard, roleGuard],
-      data: { roles: ['creator', 'store_manager', 'admin'] }
-        },
-
-      {
-        path: 'sales/summary',
-        loadComponent: () => import('./pages/dashboard/sales/sales-summary/sales-summary.component').then(m => m.SalesSummaryComponent),
-        canActivate: [onboardingGuard, roleGuard],
-        data: { roles: ['creator', 'store_manager', 'admin'] }
-      }
-      ,
-      {
-        path: 'offline-order-reconciliation',
-        loadComponent: () => import('./pages/dashboard/offline-order-reconciliation/offline-order-reconciliation.component').then(m => m.OfflineOrderReconciliationComponent),
-        canActivate: [onboardingGuard, roleGuard],
-        data: { roles: ['creator', 'admin'] }
-      }
+      { path: '', redirectTo: 'overview', pathMatch: 'full' },
+      { path: 'company-profile', loadComponent: () => import('./pages/dashboard/company-profile/company-profile.component').then(m => m.CompanyProfileComponent) },
+      { path: 'overview', loadComponent: () => import('./pages/dashboard/overview/overview.component').then(m => m.OverviewComponent) },
+      { path: 'storefront-settings', loadComponent: () => import('./pages/dashboard/storefront/storefront-settings.component').then(m => m.StorefrontSettingsComponent) },
+      { path: 'stores', loadComponent: () => import('./pages/dashboard/stores-management/stores-management.component').then(m => m.StoresManagementComponent) },
+      { path: 'branches', loadComponent: () => import('./pages/dashboard/branches/branches.component').then(m => m.BranchesComponent) },
+      { path: 'access', loadComponent: () => import('./pages/dashboard/access/access.component').then(m => m.AccessComponent) },
+      { path: 'user-roles', loadComponent: () => import('./pages/dashboard/user-roles/user-roles.component').then(m => m.UserRolesComponent) },
+      { path: 'subscriptions', loadComponent: () => import('./pages/dashboard/subscriptions/subscriptions.component').then(m => m.SubscriptionsComponent) },
+      { path: 'admin', loadComponent: () => import('./pages/dashboard/admin/admin.component').then(m => m.AdminComponent) },
+      { path: 'invoice-setup', loadComponent: () => import('./pages/dashboard/invoice-setup/invoice-setup.component').then(m => m.InvoiceSetupComponent) },
+      { path: 'products', loadComponent: () => import('./pages/dashboard/products/product-management.component').then(m => m.ProductManagementComponent) },
+      { path: 'inventory', loadComponent: () => import('./pages/inventory/inventory.component').then(m => m.InventoryComponent) },
+      { path: 'sales/summary', loadComponent: () => import('./pages/dashboard/sales/sales-summary/sales-summary.component').then(m => m.SalesSummaryComponent) },
+      { path: 'offline-order-reconciliation', loadComponent: () => import('./pages/dashboard/offline-order-reconciliation/offline-order-reconciliation.component').then(m => m.OfflineOrderReconciliationComponent) }
     ]
   },
-  
-  // Protected standalone routes
   {
     path: 'notifications',
-    loadComponent: () => import('./pages/notifications/notifications.component').then(m => m.NotificationsComponent),
-    canActivate: [authGuard, policyGuard]
+    loadComponent: () => import('./pages/notifications/notifications.component').then(m => m.NotificationsComponent)
   },
-  
-  
-  
-
-  // Fallback route
   {
     path: '**',
     redirectTo: ''

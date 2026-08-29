@@ -1,5 +1,6 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router, NavigationEnd } from '@angular/router';
 import { RouterOutlet } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { AccessService } from '../../core/services/access.service';
@@ -7,6 +8,7 @@ import { ToastService } from '../../shared/services/toast.service';
 import { ErrorMessages } from '../../shared/enums/notification-messages.enum';
 import { OfflineNavigationService } from '../../core/services/offline-navigation.service';
 import { NetworkService } from '../../core/services/network.service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-dashboard-layout',
@@ -14,8 +16,8 @@ import { NetworkService } from '../../core/services/network.service';
   imports: [CommonModule, RouterOutlet],
   template: `
     <div class="min-h-screen bg-gray-50 flex flex-col">
-      <!-- Sidebar for desktop -->
-      <div class="dashboard-sidebar flex flex-col items-center">
+      <!-- Sidebar for desktop - Hidden on branches page -->
+      <div class="dashboard-sidebar flex flex-col items-center" *ngIf="!isHideSidebarRoute()">
         <div class="flex flex-col h-full">
           <!-- Header -->
           <div class="flex-shrink-0 px-4 py-4 border-b border-gray-200 sidebar-header">
@@ -83,7 +85,7 @@ import { NetworkService } from '../../core/services/network.service';
 
 
   <!-- Main Content -->
-  <div class="flex-1 flex flex-col lg:ml-64" >
+  <div class="flex-1 flex flex-col" [class.lg:ml-64]="!isHideSidebarRoute()">
 
         <!-- Content -->
         <main class="flex-1 overflow-auto">
@@ -99,9 +101,20 @@ export class DashboardLayoutComponent {
   private authService = inject(AuthService);
   private accessService = inject(AccessService);
   private toastService = inject(ToastService);
+  private router = inject(Router);
   protected offlineNavService = inject(OfflineNavigationService);
   protected networkService = inject(NetworkService);
+  protected isHideSidebarRoute = signal(false);
   user = this.authService.getCurrentUser();
+
+  constructor() {
+    // Listen to route changes - sidebar is always shown on dashboard routes
+    this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe(() => {
+        this.isHideSidebarRoute.set(false);
+      });
+  }
 
   get permissions() {
     return this.accessService.permissions;

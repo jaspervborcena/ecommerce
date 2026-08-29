@@ -109,12 +109,14 @@ export class OnboardingComponent {
   }
 
   continueToSelectBranch() {
-    this.router.navigate(['/dashboard/branches']);
+    this.router.navigate(['/branches']);
   }
 
   selectBranch(branchId: string) {
     this.selectedBranchId = branchId;
-    this.router.navigate(['/dashboard/products']);
+    this.router.navigate(['/product-listing'], {
+      queryParams: { storeId: branchId }
+    });
   }
 
   openDatePicker(datePicker: HTMLInputElement) {

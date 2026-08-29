@@ -44,7 +44,7 @@ export const policyGuard: CanActivateFn = async (route, state) => {
                        currentPermission.roleId === 'customer';
 
   // Allow onboarding users to access company profile and branches for initial setup
-  if (isOnboarding && (state.url.includes('/dashboard/company-profile') || state.url.includes('/dashboard/branches'))) {
+  if (isOnboarding && (state.url.includes('/dashboard/company-profile') || state.url.includes('/branches'))) {
     console.log('🛡️ PolicyGuard: Onboarding user accessing allowed setup route - allowing');
     return true;
   }
