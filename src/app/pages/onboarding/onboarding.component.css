@@ -154,9 +154,10 @@ header.home-header.offline {
 .branch-card { max-width: 1280px; width: 100%; }
 .branch-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 1.1rem;
   margin-top: 1rem;
+  align-items: stretch;
 }
 .branch-card-item {
   background: #f5f1ee;
@@ -167,6 +168,8 @@ header.home-header.offline {
   display: flex;
   flex-direction: column;
   box-shadow: 0 2px 6px rgba(30, 20, 18, 0.04);
+  width: 100%;
+  overflow-wrap: anywhere;
 }
 .branch-card-item.selected {
   border-color: #e75a57;
@@ -185,6 +188,7 @@ header.home-header.offline {
   line-height: 1.25;
   color: #1f1f1f;
   font-weight: 700;
+  word-break: break-word;
 }
 .status-badge {
   display: inline-flex;
@@ -258,13 +262,26 @@ header.home-header.offline {
 
 @media (max-width: 1100px) {
   .branch-grid {
-    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   }
 }
 
 @media (max-width: 620px) {
   .branch-grid {
     grid-template-columns: 1fr;
+  }
+
+  .branch-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .status-badge {
+    align-self: flex-start;
+  }
+
+  .select-branch-button {
+    padding: 0.8rem 0.9rem;
   }
 }
 

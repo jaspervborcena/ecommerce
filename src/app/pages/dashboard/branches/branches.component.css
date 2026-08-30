@@ -106,10 +106,11 @@
 
 .branch-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 1.1rem;
   max-width: 100%;
   margin: 0 auto;
+  align-items: stretch;
 }
 
 .branch-card-item {
@@ -123,6 +124,8 @@
   box-shadow: 0 2px 6px rgba(30, 20, 18, 0.04);
   transition: all 0.2s ease;
   cursor: pointer;
+  width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .branch-card-item:hover {
@@ -151,6 +154,7 @@
   line-height: 1.25;
   color: #1f1f1f;
   font-weight: 700;
+  word-break: break-word;
 }
 
 .status-badge {
@@ -246,7 +250,7 @@
 /* Responsive Design */
 @media (max-width: 1100px) {
   .branch-grid {
-    grid-template-columns: repeat(3, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   }
 }
 
@@ -269,7 +273,7 @@
   }
 
   .branch-grid {
-    grid-template-columns: repeat(2, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
     gap: 0.9rem;
   }
 
@@ -320,6 +324,20 @@
     min-height: auto;
   }
 
+  .branch-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .status-badge {
+    align-self: flex-start;
+  }
+
+  .branch-address,
+  .branch-hours {
+    align-items: flex-start;
+  }
+
   .back-button {
     flex: 1;
     justify-content: center;
@@ -328,5 +346,9 @@
   .add-branch-button {
     flex: 1;
     justify-content: center;
+  }
+
+  .select-branch-button {
+    padding: 0.8rem 0.9rem;
   }
 }
