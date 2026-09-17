@@ -200,7 +200,7 @@ export class LogoComponent {
   @Input() background: LogoBackground = 'white';
 
   get logoSrc(): string {
-    return '/assets/shao_tang_logo.png';
+    return '/assets/bentamulogo.png';
   }
 
   get altText(): string {

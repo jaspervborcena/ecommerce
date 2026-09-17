@@ -24,9 +24,7 @@ export class RegisterComponent {
 
   // App constants and network status
   readonly isOnline = this.networkService.isOnline;
-  readonly appName = computed(() => 
-    this.isOnline() ? AppConstants.APP_NAME : AppConstants.APP_NAME_OFFLINE
-  );
+  readonly appName = computed(() => String(AppConstants.APP_NAME));
 
   registerForm = this.fb.group({
     displayName: ['', [Validators.required]],

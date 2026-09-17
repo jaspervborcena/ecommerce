@@ -28,9 +28,7 @@ export class HomeComponent {
   
   // Expose app constants and network status to template
   readonly isOnline = this.networkService.isOnline;
-  readonly appName = computed(() => 
-    this.isOnline() ? AppConstants.APP_NAME : AppConstants.APP_NAME_OFFLINE
-  );
+  readonly appName = computed(() => String(AppConstants.APP_NAME));
   readonly headerClass = computed(() => 
     this.isOnline() ? 'home-header' : 'home-header offline'
   );

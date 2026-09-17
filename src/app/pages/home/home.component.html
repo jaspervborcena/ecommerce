@@ -14,7 +14,7 @@
             [companyName]="appName()">
           </app-logo>
           <a *ngIf="!isAuthenticated()" routerLink="/" class="guest-header-brand">
-            <img src="assets/shao_tang_logo.png" alt="Shao Tang">
+            <img src="assets/bentamulogo.png" alt="Bentamu">
           </a>
         </div>
       </div>
@@ -143,35 +143,81 @@
 
           <!-- Guest hero template (shown for non-authenticated users AND visitors) -->
           <ng-template #guestHero>
-            <div class="restaurant-brand">
-              <img class="restaurant-logo" src="assets/shao_tang_logo.png" alt="Shao Tang authentic Chinese cuisine">
-            </div>
-            <p class="restaurant-kicker">Legendary flavors of China</p>
-            <h2 class="hero-title">Served to perfection: Shao Tang!</h2>
-            <p class="hero-subtitle">
-              Authentic Chinese cuisine made with fresh, carefully selected ingredients for a delicious experience every time.
-            </p>
-            <div class="restaurant-meta">
-              <span>Fresh ingredients</span>
-              <span>Open Daily</span>
-            </div>
-            <div class="hero-actions">
-              <a routerLink="/onboarding" class="cta-button primary">Order for pick up <small>Self booking</small></a>
-            </div>
-            <div class="tracking-panel">
-              <p>Check if your order is ready for pickup.</p>
-              <a routerLink="/store/demo" class="track-button">⌕ <span>Track my order</span></a>
-            </div>
-            <div class="order-via">
-              <span>Order via:</span>
-              <div>
-                <a href="https://www.foodpanda.ph/" target="_blank" rel="noopener">foodpanda</a>
-                <a href="https://food.grab.com/ph/en/" target="_blank" rel="noopener">Grab</a>
+            <div class="landing-shell">
+              <div class="hero-copy">
+                <p class="restaurant-kicker">Your favorite online marketplace</p>
+                <h2 class="hero-title">Shop smarter with <span>Bentamu.</span></h2>
+                <p class="hero-subtitle">
+                  Discover trending products, shop with confidence, and enjoy a seamless online buying experience built for modern convenience.
+                </p>
+
+                <div class="hero-actions">
+                  <a routerLink="/onboarding" class="cta-button primary">Start shopping <small>Join now</small></a>
+                </div>
+
+                <div class="tracking-panel">
+                  <p>Track your orders and stay updated from checkout to delivery.</p>
+                  <a routerLink="/store/demo" class="track-button">⌕ <span>Track my order</span></a>
+                </div>
+
+                <div class="order-via">
+                  <span>Shop through our channels:</span>
+                  <div>
+                    <a routerLink="/register" aria-label="Create a Bentamu account">Create account</a>
+                    <a routerLink="/login" aria-label="Login to Bentamu">Login</a>
+                  </div>
+                </div>
+
+                <div class="restaurant-contact">
+                  <strong>Need help?</strong>
+                  <span>Contact Bentamu support for orders, products, and account assistance</span>
+                </div>
               </div>
-            </div>
-            <div class="restaurant-contact">
-              <strong>Contact Us</strong>
-              <span>Visit us for an authentic Chinese dining experience</span>
+
+              <div class="phone-demo" aria-label="Bentamu mobile app preview">
+                <div class="phone-shell">
+                  <div class="phone-top-bar">
+                    <span class="phone-title">Featured Products</span>
+                    <span class="phone-dots">•••</span>
+                  </div>
+
+                  <div class="phone-grid">
+                    <div class="phone-product-card">
+                      <div class="product-thumb thumb-1"></div>
+                      <div class="product-labels">
+                        <span>Organic<br />Leafy Greens</span>
+                        <strong>₱ 52.00</strong>
+                      </div>
+                    </div>
+                    <div class="phone-product-card">
+                      <div class="product-thumb thumb-2"></div>
+                      <div class="product-labels">
+                        <span>Kitchen<br />Essentials</span>
+                        <strong>₱ 39.00</strong>
+                      </div>
+                    </div>
+                    <div class="phone-product-card">
+                      <div class="product-thumb thumb-3"></div>
+                      <div class="product-labels">
+                        <span>New Arrival<br />Bundle</span>
+                        <strong>₱ 68.00</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="phone-category">
+                    <span class="category-name">Kitchen Gadgets</span>
+                    <span class="category-dots">•••</span>
+                  </div>
+
+                  <div class="phone-icons">
+                    <div class="icon-chip active">❤</div>
+                    <div class="icon-chip">♡</div>
+                    <div class="icon-chip">▣</div>
+                    <div class="icon-chip">◫</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </ng-template>
         </div>
@@ -262,7 +308,7 @@
         <div class="cta-content">
           <h2 class="cta-title">Ready to get started?</h2>
           <p class="cta-subtitle">
-            Join growing brands already using Tovrika Ecommerce to sell smarter and scale faster.
+            Join growing brands already using Bentamu to sell smarter and scale faster.
           </p>
           <div class="cta-actions">
             <a routerLink="/register" class="cta-button primary">
@@ -290,7 +336,7 @@
             </a>
           </div>
           <div class="footer-text">
-            <p>&copy; 2025 Tovrika Ecommerce. All rights reserved. Built with ❤️ for modern commerce.</p>
+            <p>&copy; 2025 Bentamu. All rights reserved. Built with ❤️ for modern commerce.</p>
           </div>
         </div>
       </div>

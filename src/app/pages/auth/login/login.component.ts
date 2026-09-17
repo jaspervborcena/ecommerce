@@ -23,9 +23,7 @@ export class LoginComponent implements OnInit {
 
   // App constants and network status
   readonly isOnline = this.networkService.isOnline;
-  readonly appName = computed(() => 
-    this.isOnline() ? AppConstants.APP_NAME : AppConstants.APP_NAME_OFFLINE
-  );
+  readonly appName = computed(() => String(AppConstants.APP_NAME));
 
   loginForm = this.fb.group({
     email: ['', [Validators.required, Validators.email]],

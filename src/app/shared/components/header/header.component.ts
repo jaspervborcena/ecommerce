@@ -63,10 +63,7 @@ export class HeaderComponent implements OnInit {
     const status = this.networkService.isOnline();
     return status;
   });
-  protected appName = computed(() => {
-    const name = this.isOnline() ? AppConstants.APP_NAME : AppConstants.APP_NAME_OFFLINE;
-    return name;
-  });
+  protected appName = computed(() => String(AppConstants.APP_NAME));
   protected headerClass = computed(() => {
     const cssClass = this.isOnline() ? 'dashboard-header' : 'dashboard-header offline';
     return cssClass;

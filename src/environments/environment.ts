@@ -1,27 +1,7 @@
-// DEVELOPMENT ENVIRONMENT - Uses shaotang-74c95 Firebase project
-
-// Dynamic environment detection for web
-let isProd = false;
-let paypalConfig = {
-  clientId: 'ASj0btqJ9ctHcaXO19btNq5AiAPcvMJ-V-xqq9atKiuiJ2uGQ0JoAHlCXWwM_m5_Zdmn9CQkYxQkiQGu',
-  sandbox: true,
-  apiUrl: '/paypal'
-};
-
-if (typeof window !== 'undefined' && window.location && window.location.hostname) {
-  const host = window.location.hostname;
-  if (host === 'app.pos.tovrika.com') {
-    isProd = true;
-    paypalConfig = {
-      clientId: '', // Set your live client ID here or load dynamically
-      sandbox: false,
-      apiUrl: 'https://asia-east1-jasperpos-1dfd5.cloudfunctions.net'
-    };
-  }
-}
+// Development environment configuration for shaotang-74c95
 
 export const environment = {
-  production: isProd,
+  production: false,
   version: '1.0.2',
   defaultCompanyId: 'kTAtjOEjwrrzdneego2o',
   firebase: {
@@ -41,5 +21,9 @@ export const environment = {
   inventory: {
     reconciliationMode: 'recon' as 'legacy' | 'recon'
   },
-  paypal: paypalConfig
+  paypal: {
+    clientId: 'ASj0btqJ9ctHcaXO19btNq5AiAPcvMJ-V-xqq9atKiuiJ2uGQ0JoAHlCXWwM_m5_Zdmn9CQkYxQkiQGu',
+    sandbox: true,
+    apiUrl: '/paypal'
+  }
 };

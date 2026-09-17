@@ -34,20 +34,16 @@ export class NetworkService {
         connectionTestRef,
         { includeMetadataChanges: true },
         (snapshot) => {
-          // fromCache = true means reading from offline cache (OFFLINE)
-          // fromCache = false means reading from server (ONLINE)
-          const isConnected = !snapshot.metadata.fromCache;
-          
-          if (isConnected) {
-            this.updateNetworkStatus(true);
-          } else {
-            this.updateNetworkStatus(false);
-          }
+          // A cached snapshot is normal during startup and does not prove that
+          // the browser is offline. Use the browser signal for login and auth
+          // flows; Firestore will continue retrying its server connection.
+          this.updateNetworkStatus(navigator.onLine);
         },
         (error) => {
           console.warn('⚠️ Firestore connection monitor error:', error);
-          // On error, assume offline
-          this.updateNetworkStatus(false);
+          // A permission error or an unavailable monitor document does not
+          // mean the browser has lost connectivity.
+          this.updateNetworkStatus(navigator.onLine);
         }
       );
     } catch (error) {

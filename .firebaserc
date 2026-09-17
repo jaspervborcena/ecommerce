@@ -1,13 +1,13 @@
 {
   "projects": {
-    "dev": "jasperpos-dev",
-    "prod": "jasperpos-1dfd5"
+    "dev": "shaotang-74c95",
+    "prod": "shaotang-74c95"
   },
   "targets": {
-    "jasperpos-dev": {
+    "shaotang-74c95": {
       "hosting": {
         "app": [
-          "jasperpos-dev"
+          "shaotang-74c95"
         ]
       }
     },

@@ -70,36 +70,36 @@
   <main class="order-page" *ngIf="!showPickupSchedule">
     <section class="order-hero" aria-labelledby="order-title">
       <div class="hero-copy">
-        <p class="eyebrow">Shao Tang</p>
-        <h1 id="order-title">Order Information</h1>
-        <p class="hero-intro">Enjoy your Shao Tang favorites your way.</p>
+        <p class="eyebrow">Bentamu</p>
+        <h1 id="order-title">Shopping Information</h1>
+        <p class="hero-intro">Discover products and enjoy a smooth online shopping experience.</p>
       </div>
-      <img class="hero-logo" src="assets/shao_tang_logo.png" alt="Shao Tang">
+      <img class="hero-logo" src="assets/bentamulogo.png" alt="Bentamu">
     </section>
 
     <section class="order-content" aria-labelledby="pickup-title">
       <div class="pickup-panel">
-        <p class="section-kicker">Pickup orders</p>
-        <h2 id="pickup-title">Pick-Up Order</h2>
-        <p>You’ll be responsible for collecting your order directly from the branch.<br>If you prefer, you may also arrange delivery through a third-party courier service such as:</p>
+        <p class="section-kicker">Order options</p>
+        <h2 id="pickup-title">Shop and Collect</h2>
+        <p>Choose your preferred way to receive your items.<br>You can also arrange delivery through a trusted courier or pick up from a selected branch.</p>
         <ul class="service-list">
-          <li><strong>Grab Express</strong></li>
-          <li><strong>Angkas Padala</strong></li>
-          <li><strong>Move It Express</strong></li>
+          <li><strong>Store pickup</strong></li>
+          <li><strong>Home delivery</strong></li>
+          <li><strong>Branch fulfillment</strong></li>
         </ul>
-        <button type="button" class="pickup-button" (click)="continueToPickup()">Continue with Pick Up <span aria-hidden="true">&#8594;</span></button>
+        <button type="button" class="pickup-button" (click)="continueToPickup()">Continue shopping <span aria-hidden="true">&#8594;</span></button>
       </div>
 
       <div class="delivery-panel" aria-labelledby="delivery-title">
-        <p class="section-kicker">Delivered to you</p>
-        <h2 id="delivery-title">Want Delivery Instead?</h2>
-        <p>Enjoy hassle-free service and have your order brought straight to your doorstep.<br>Place your order through our trusted delivery partners:</p>
+        <p class="section-kicker">Fast and convenient</p>
+        <h2 id="delivery-title">Need Delivery?</h2>
+        <p>Enjoy a smooth online shopping experience with flexible delivery options and reliable order tracking.</p>
         <div class="partner-links">
-          <a href="https://www.foodpanda.ph/" target="_blank" rel="noopener noreferrer" aria-label="Order via FoodPanda">
-            <img src="https://axpancitconlechon.com/assets/foodpanda-logo-ZogZlWFO.png" alt="FoodPanda">
+          <a routerLink="/register" aria-label="Create a Bentamu account">
+            <span>Create account</span>
           </a>
-          <a href="https://food.grab.com/ph/en/" target="_blank" rel="noopener noreferrer" aria-label="Order via GrabFood">
-            <img src="https://axpancitconlechon.com/assets/grab-logo-DhyRUeMt.png" alt="GrabFood">
+          <a routerLink="/login" aria-label="Login to Bentamu">
+            <span>Login</span>
           </a>
         </div>
       </div>

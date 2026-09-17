@@ -59,9 +59,7 @@ export class DashboardComponent implements OnInit {
   
   // App constants and network status
   protected isOnline = computed(() => this.networkService.isOnline());
-  protected appName = computed(() => 
-    this.isOnline() ? AppConstants.APP_NAME : AppConstants.APP_NAME_OFFLINE
-  );
+  protected appName = computed(() => String(AppConstants.APP_NAME));
   protected appVersion = environment.version;
   protected headerClass = computed(() => 
     this.isOnline() ? 'dashboard-header' : 'dashboard-header offline'

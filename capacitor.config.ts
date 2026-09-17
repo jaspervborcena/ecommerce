@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.tovrika.pos',
-  appName: 'Tovrika POS',
+  appId: 'com.bentamu.pos',
+  appName: 'Bentamu',
   webDir: 'dist/pos-system/browser',
   server: {
     androidScheme: 'https',

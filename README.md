@@ -1,12 +1,12 @@
-# Shao Tang Ecommerce
+# Bentamu Ecommerce
 
-Shao Tang Ecommerce is an online store platform for managing a growing network of branches, products, orders, customers, and sales partners. Each branch can operate its own catalog and fulfillment workflow while remaining part of the Shao Tang business.
+Bentamu Ecommerce is an online store platform for managing a growing network of branches, products, orders, customers, and sales partners. Each branch can operate its own catalog and fulfillment workflow while remaining part of the Bentamu business.
 
-The platform will also support an influencer and reseller channel. Approved partners can promote Shao Tang products using tracked links or codes, and receive commissions for completed sales. This provides a dropshipping-style selling model without requiring every influencer to hold inventory.
+The platform will also support an influencer and reseller channel. Approved partners can promote Bentamu products using tracked links or codes, and receive commissions for completed sales. This provides a dropshipping-style selling model without requiring every influencer to hold inventory.
 
 ## Goal
 
-Build a commerce-first platform that allows Shao Tang and its branches to:
+Build a commerce-first platform that allows Bentamu and its branches to:
 - manage products and inventory
 - operate multiple branches under one organization
 - run a central storefront and branch-specific storefront experiences

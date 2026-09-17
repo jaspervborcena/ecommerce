@@ -27,9 +27,7 @@ export class JoinStoreComponent {
   readonly isAuthenticated = this.authService.isAuthenticated;
   readonly userRole = this.authService.userRole;
   readonly isOnline = this.networkService.isOnline;
-  readonly appName = computed(() =>
-    this.isOnline() ? AppConstants.APP_NAME : AppConstants.APP_NAME_OFFLINE
-  );
+  readonly appName = computed(() => String(AppConstants.APP_NAME));
   readonly headerClass = computed(() =>
     this.isOnline() ? 'home-header' : 'home-header offline'
   );

@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, Injector, runInInjectionContext } from '@angular/core';
 import { Firestore, collection, addDoc, doc, setDoc, deleteDoc, DocumentReference } from '@angular/fire/firestore';
 import { IndexedDBService } from './indexeddb.service';
 import { FirestoreSecurityService } from './firestore-security.service';
@@ -26,6 +26,7 @@ export class OfflineDocumentService {
   private indexedDBService = inject(IndexedDBService);
   private securityService = inject(FirestoreSecurityService);
   private logger = inject(LoggerService);
+  private injector = inject(Injector);
 
   /**
    * Create document with offline/online hybrid approach - ALWAYS pre-generate ID
@@ -123,9 +124,10 @@ export class OfflineDocumentService {
   this.logger.debug('Creating document online', { area: collectionName });
       // Ensure server timestamps for create when writing online
   const toWrite = this.cleanForFirestore(applyCreateTimestamps(data, true));
-      const collectionRef = collection(this.firestore, collectionName);
       const start = performance.now?.() ?? Date.now();
-      const docRef = await addDoc(collectionRef, toWrite);
+      const docRef = await runInInjectionContext(this.injector, () =>
+        addDoc(collection(this.firestore, collectionName), toWrite)
+      );
       const durationMs = Math.round((performance.now?.() ?? Date.now()) - start);
       this.logger.dbSuccess('Firestore add succeeded', {
         api: 'firestore.add',
@@ -155,10 +157,11 @@ export class OfflineDocumentService {
   private async createOnlineDocumentWithId(collectionName: string, documentId: string, data: any): Promise<void> {
     try {
   this.logger.debug('Creating document online with pre-generated ID', { area: collectionName, payload: { docId: documentId } });
-      const docRef = doc(this.firestore, collectionName, documentId);
       const start = performance.now?.() ?? Date.now();
   const toWrite = this.cleanForFirestore(applyCreateTimestamps(data, true));
-  await setDoc(docRef, toWrite);
+  await runInInjectionContext(this.injector, () =>
+    setDoc(doc(this.firestore, collectionName, documentId), toWrite)
+  );
       const durationMs = Math.round((performance.now?.() ?? Date.now()) - start);
       this.logger.dbSuccess('Firestore set succeeded', {
         api: 'firestore.set',

@@ -22,10 +22,10 @@ import { AuthService } from '../../services/auth.service';
                   </svg>
                 </div>
                 <h1 class="text-xl font-bold text-gray-900">
-                  <a routerLink="/" class="hover:text-primary-600 transition-colors">Tovrika</a>
+                  <a routerLink="/" class="hover:text-primary-600 transition-colors">Bentamu</a>
                 </h1>
               </div>
-              <span class="ml-3 px-2 py-1 bg-primary-50 text-primary-700 text-xs font-medium rounded-full">Ecommerce Platform</span>
+              <span class="ml-3 px-2 py-1 bg-primary-50 text-primary-700 text-xs font-medium rounded-full">Online Shopping Platform</span>
             </div>
             
             <div class="flex items-center space-x-1">

@@ -1,4 +1,4 @@
-// PRODUCTION ENVIRONMENT - Uses shaotang-74c95 Firebase project
+// Production environment configuration
 export const environment = {
   production: true,
   version: '1.0.2',
