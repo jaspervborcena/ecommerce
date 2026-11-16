@@ -175,3 +175,4 @@ Role-based users can also shop as customers. Their operational permissions must 
 ## Related documentation
 
 - See docs/commerce-roadmap.md for the detailed implementation plan and status tracker.
+- See POSTMAN-SAMPLE-DATA-README.md for the sample Firestore data and Postman usage notes.

@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "backfill:sample-data": "node scripts/sample-data-backfill.js",
     "serve": "firebase emulators:start --only functions",
     "deploy": "firebase deploy --only functions",
-    "lint": "echo 'no lint configured'"
+    "lint": "echo 'no lint configured'",
+    "test:backfill": "node --test scripts/sample-data-backfill.spec.js"
   },
   "dependencies": {
     "firebase-admin": "^12.5.0",
