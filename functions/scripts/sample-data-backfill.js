@@ -43,6 +43,7 @@ export const SAMPLE_COLLECTIONS = [
   'systemConfig',
   'test',
   'storefront_companies',
+  'storefront_branches',
   'storefront_products',
   'storefront_stores',
   'userRoles',
@@ -178,6 +179,16 @@ function createSupplementalCollections() {
       status: 'active'
     });
 
+    collections.storefront_branches = collections.storefront_branches || [];
+    collections.storefront_branches.push({
+      companyId: companyId(index),
+      storeId: storeId(index),
+      name: ['Main Branch', 'North Branch', 'South Branch'][index],
+      address: `${index + 1} Sample Street, Manila`,
+      status: 'active',
+      storeHours: '09:00 - 18:00'
+    });
+
     collections.storefront_products = collections.storefront_products || [];
     collections.storefront_products.push({
       storeId: storeId(index),
@@ -232,6 +243,7 @@ function documentId(collectionName, record, index) {
     case 'roledefinition': return record.roleId || sampleId('role', index);
     case 'stores': return storeId(index);
     case 'storefront_companies': return record.slug || companyId(index);
+    case 'storefront_branches': return branchId(index);
     case 'storefront_products': return productId(index);
     case 'storefront_stores': return storeId(index);
     case 'users': return userId(index);
@@ -251,6 +263,11 @@ function linkRecord(collectionName, record, index) {
   if (collectionName === 'storefront_companies') {
     linked.companyId = company;
     linked.slug = company;
+    return linked;
+  }
+  if (collectionName === 'storefront_branches') {
+    linked.companyId = company;
+    linked.storeId = store;
     return linked;
   }
   if (collectionName === 'storefront_products') {

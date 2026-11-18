@@ -167,6 +167,18 @@ export class CompanyService {
               } catch (publicationError) {
                 console.warn('CompanyService: Could not refresh the public company lookup.', publicationError);
               }
+              try {
+                const branchesRef = collection(this.firestore, 'branches');
+                const ownedBranches = await getDocs(query(branchesRef, where('uid', '==', user.uid)));
+                for (const branchDoc of ownedBranches.docs) {
+                  const branch = branchDoc.data() as Partial<Branch>;
+                  if (branch.companyId === companyDoc.id) {
+                    await this.storefrontPublication.syncBranch(branchDoc.id, branch);
+                  }
+                }
+              } catch (branchPublicationError) {
+                console.warn('CompanyService: Could not refresh public branch listings.', branchPublicationError);
+              }
             }
 
             // Persist a local snapshot for offline use into the `companies` store
@@ -394,12 +406,14 @@ export class CompanyService {
       
       const newStore = {
         ...storeData,
+        uid: this.authService.getCurrentUser()?.uid || storeData['uid'],
         companyId,
         createdAt: new Date(),
         updatedAt: new Date()
       };
       // 🔥 NEW APPROACH: Use OfflineDocumentService for offline-safe creation
       const storeId = await this.offlineDocService.createDocument('stores', newStore);
+      await this.storefrontPublication.syncStore(storeId, newStore);
 
       // Handle branches if they exist (optional UI property)
       const branches = (store as any).branches;
@@ -407,13 +421,15 @@ export class CompanyService {
         for (const branch of branches) {
           const newBranch = {
             ...branch,
+            uid: this.authService.getCurrentUser()?.uid || branch.uid,
             companyId,
             storeId: storeId,
             createdAt: new Date(),
             updatedAt: new Date()
           };
           // 🔥 NEW APPROACH: Use OfflineDocumentService for offline-safe creation
-          await this.offlineDocService.createDocument('branches', newBranch);
+          const branchId = await this.offlineDocService.createDocument('branches', newBranch);
+          await this.storefrontPublication.syncBranch(branchId, newBranch);
         }
       }
     }

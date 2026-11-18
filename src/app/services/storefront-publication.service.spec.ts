@@ -1,12 +1,52 @@
 import { Product, ProductStatus } from '../interfaces/product.interface';
+import { Branch } from '../interfaces/branch.interface';
 import { Store } from '../interfaces/store.interface';
 import {
+  toPublicStorefrontBranch,
   toPublicStorefrontCompany,
   toPublicStorefrontProduct,
   toPublicStorefrontStore
 } from './storefront-publication.service';
 
 describe('storefront public projections', () => {
+  it('publishes the branch-to-store link and safe public branch fields', () => {
+    const branch: Partial<Branch> = {
+      uid: 'owner-uid',
+      companyId: 'company-1',
+      storeId: 'store-1',
+      name: 'Main Branch',
+      address: {
+        street: '10 Test Street',
+        city: 'Manila',
+        state: 'Metro Manila',
+        zipCode: '1000',
+        country: 'Philippines'
+      },
+      isActive: true,
+      assignedUsers: ['private-user'],
+      settings: {
+        operatingHours: [{ dayOfWeek: 1, isOpen: true, openTime: '09:00', closeTime: '18:00' }],
+        contactInfo: { phone: 'private-phone', email: 'private@example.test' },
+        posSettings: {
+          enableCustomerDisplay: false,
+          requireSignature: false,
+          allowDiscounts: true,
+          maxDiscountPercent: 20
+        }
+      }
+    };
+
+    expect(toPublicStorefrontBranch(branch)).toEqual({
+      companyId: 'company-1',
+      storeId: 'store-1',
+      name: 'Main Branch',
+      address: '10 Test Street, Manila, Metro Manila, 1000, Philippines',
+      status: 'active',
+      storeHours: '09:00 - 18:00'
+    });
+    expect(toPublicStorefrontBranch({ ...branch, isActive: false })).toBeNull();
+  });
+
   it('publishes a safe slug-to-company lookup without owner details', () => {
     expect(toPublicStorefrontCompany('company-1', {
       name: 'Harbor Coffee',

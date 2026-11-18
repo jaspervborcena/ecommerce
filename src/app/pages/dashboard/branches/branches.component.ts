@@ -6,6 +6,7 @@ import { environment } from '../../../../environments/environment';
 import { runInInjectionContext } from '@angular/core';
 import { StoreSelectionService } from '../../../services/store-selection.service';
 import { StorefrontPublicationService } from '../../../services/storefront-publication.service';
+import { PublicStorefrontBranch } from '../../../services/storefront-publication.service';
 
 @Component({
   selector: 'app-branches',
@@ -36,7 +37,7 @@ import { StorefrontPublicationService } from '../../../services/storefront-publi
       } @else if (availableLocations().length === 0) {
         <div class="empty-state">
           <p class="empty-state-title">No active branches are available right now.</p>
-          <p class="empty-state-text">Please check back later or create a branch for this company.</p>
+          <p class="empty-state-text">Please check back later for an available branch.</p>
         </div>
       } @else {
         <div class="branch-grid">
@@ -82,9 +83,7 @@ export class BranchesComponent implements OnInit {
 
   protected availableLocations = signal<Array<{
     id: string;
-    name: string;
     branchName: string;
-    storeName: string;
     address: string;
     status: string;
     storeHours: string;
@@ -104,7 +103,7 @@ export class BranchesComponent implements OnInit {
     this.router.navigate(['/']);
   }
 
-  protected selectBranch(location: { id: string; storeId: string; branchName: string; storeName: string }) {
+  protected selectBranch(location: { id: string; storeId: string; branchName: string }) {
     console.log('✅ BranchesComponent: Selected branch:', location);
     this.selectedBranchId.set(location.id);
     
@@ -135,33 +134,23 @@ export class BranchesComponent implements OnInit {
         return;
       }
 
-      const storesRef = collection(this.firestore, 'storefront_stores');
-      const storesQuery = query(
-        storesRef,
+      const branchesRef = collection(this.firestore, 'storefront_branches');
+      const branchesQuery = query(
+        branchesRef,
         where('companyId', '==', companyId),
         where('status', '==', 'active')
       );
-      const snapshot = await getDocs(storesQuery);
-      const storeDocs = snapshot.docs;
+      const snapshot = await getDocs(branchesQuery);
 
-      // Normalize the store data
-      const normalized = storeDocs.map(docSnap => {
-        const data = docSnap.data() as Record<string, any>;
-        const address = this.formatAddress(data);
-        const branchName = String(data['branchName'] || data['name'] || data['storeName'] || 'Main Branch');
-        const storeName = String(data['storeName'] || data['name'] || 'Store');
-        const rawStatus = data['status'] ?? data['isActive'];
-        const status = rawStatus === 'active' || rawStatus === true ? 'active' : 'inactive';
-
+      const normalized = snapshot.docs.map(docSnap => {
+        const data = docSnap.data() as PublicStorefrontBranch;
         return {
           id: docSnap.id,
-          name: branchName,
-          branchName,
-          storeName,
-          address,
-          status,
-          storeHours: this.formatHours(data),
-          storeId: docSnap.id
+          branchName: data.name,
+          address: data.address,
+          status: data.status,
+          storeHours: data.storeHours,
+          storeId: data.storeId
         };
       });
 
@@ -179,52 +168,4 @@ export class BranchesComponent implements OnInit {
     }
   }
 
-  private formatAddress(data: Record<string, any>): string {
-    const address = data?.['address'];
-    if (address && typeof address === 'object') {
-      const parts = [
-        address['street'] || address['addressLine1'] || address['line1'],
-        address['city'],
-        address['state'],
-        address['zipCode'] || address['postalCode'] || address['zip'],
-        address['country']
-      ].filter(Boolean);
-
-      if (parts.length) {
-        return parts.join(', ');
-      }
-    }
-
-    const fallbackParts = [
-      data?.['streetAddress'] || data?.['addressLine1'] || data?.['address1'],
-      data?.['city'],
-      data?.['state'],
-      data?.['zipCode'] || data?.['postalCode'] || data?.['zip'],
-      data?.['country']
-    ].filter(Boolean);
-
-    if (fallbackParts.length) {
-      return fallbackParts.join(', ');
-    }
-
-    return data?.['address'] || data?.['location'] || 'Address unavailable';
-  }
-
-  private formatHours(data: Record<string, any>): string {
-    const operatingHours = data?.['settings']?.['operatingHours'];
-    if (Array.isArray(operatingHours) && operatingHours.length) {
-      const openHours = operatingHours.filter((slot: any) => slot?.['isOpen'] && slot?.['openTime'] && slot?.['closeTime']);
-      if (openHours.length) {
-        const first = openHours[0];
-        return `${first['openTime']} - ${first['closeTime']}`;
-      }
-    }
-
-    const hours = data?.['storeHours'] || data?.['businessHours'] || data?.['openingHours'] || data?.['hours'];
-    if (hours) {
-      return String(hours);
-    }
-
-    return '24 Hours';
-  }
 }

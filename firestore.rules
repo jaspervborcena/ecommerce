@@ -29,6 +29,19 @@ service cloud.firestore {
         data.status == 'active';
     }
 
+    function isSafePublicStorefrontBranch(data) {
+      return data.keys().hasOnly([
+          'companyId', 'storeId', 'name', 'address', 'status', 'storeHours'
+        ]) &&
+        data.keys().hasAll(['companyId', 'storeId', 'name', 'address', 'status', 'storeHours']) &&
+        data.companyId is string &&
+        data.storeId is string &&
+        data.name is string &&
+        data.address is string &&
+        data.status == 'active' &&
+        data.storeHours is string;
+    }
+
     function isSafePublicStorefrontCompany(data) {
       return data.keys().hasOnly(['companyId', 'slug', 'name', 'status']) &&
         data.keys().hasAll(['companyId', 'slug', 'name', 'status']) &&
@@ -53,6 +66,7 @@ service cloud.firestore {
 
     function isStorefrontManagedPath(document) {
       return document.matches('storefront_companies/[^/]+') ||
+        document.matches('storefront_branches/[^/]+') ||
         document.matches('storefront_stores/[^/]+') ||
         document.matches('storefront_products/[^/]+') ||
         document.matches('storefront_orders/[^/]+');
@@ -108,6 +122,15 @@ service cloud.firestore {
         isSafePublicStorefrontStore(request.resource.data);
       allow delete: if isAuthenticated() &&
         get(/databases/$(database)/documents/stores/$(storeId)).data.uid == request.auth.uid;
+    }
+
+    match /storefront_branches/{branchId} {
+      allow read: if isSafePublicStorefrontBranch(resource.data);
+      allow create, update: if isAuthenticated() &&
+        getAfter(/databases/$(database)/documents/branches/$(branchId)).data.uid == request.auth.uid &&
+        isSafePublicStorefrontBranch(request.resource.data);
+      allow delete: if isAuthenticated() &&
+        get(/databases/$(database)/documents/branches/$(branchId)).data.uid == request.auth.uid;
     }
 
     match /storefront_products/{productId} {

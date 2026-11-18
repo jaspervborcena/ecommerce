@@ -2,6 +2,7 @@ import { BusinessType } from './company.interface';
 
 export interface Branch {
   id: string;
+  uid: string;
   companyId: string;
   storeId: string;
   name: string;

@@ -89,6 +89,7 @@ test('builds linked sample documents for every app and rules collection', () => 
     const company = byPath.get(`companies/sample-company-${suffix}`);
     const store = byPath.get(`stores/sample-store-${suffix}`);
     const branch = byPath.get(`branches/sample-branch-${suffix}`);
+    const publicBranch = byPath.get(`storefront_branches/sample-branch-${suffix}`);
     const product = byPath.get(`products/sample-product-${suffix}`);
     const order = byPath.get(`orders/ORDER-${suffix}`);
     const orderDetails = byPath.get(`orderDetails/sample-order-detail-${suffix}`);
@@ -97,6 +98,8 @@ test('builds linked sample documents for every app and rules collection', () => 
     assert.equal(store.companyId, `sample-company-${suffix}`);
     assert.equal(branch.storeId, `sample-store-${suffix}`);
     assert.equal(branch.companyId, `sample-company-${suffix}`);
+    assert.equal(publicBranch.storeId, branch.storeId);
+    assert.equal(publicBranch.companyId, branch.companyId);
     assert.equal(product.companyId, `sample-company-${suffix}`);
     assert.equal(product.storeId, `sample-store-${suffix}`);
     assert.equal(product.branchId, `sample-branch-${suffix}`);
@@ -120,7 +123,7 @@ test('inserts the same stable sample records on repeated backfills', async () =>
 
 test('builds a linked account-to-storefront journey with registered customer checkout', () => {
   const documents = buildJourneyDocuments(journeyFixture, journeyAccounts);
-  assert.equal(documents.length, 14);
+  assert.equal(documents.length, 20);
   const byPath = new Map(documents.map(({ path, data }) => [path, data]));
   const owner = byPath.get(`users/${journeyAccounts.ownerUid}`);
   const shopper = byPath.get(`users/${journeyAccounts.shopperUid}`);
@@ -128,10 +131,16 @@ test('builds a linked account-to-storefront journey with registered customer che
   const mainStore = byPath.get('stores/journey-store-main');
   const northStore = byPath.get('stores/journey-store-north');
   const publicMainStore = byPath.get('storefront_stores/journey-store-main');
+  const mainBranch = byPath.get('branches/journey-branch-main');
+  const publicMainBranch = byPath.get('storefront_branches/journey-branch-main');
+  const northBranch = byPath.get('branches/journey-branch-north');
+  const publicNorthBranch = byPath.get('storefront_branches/journey-branch-north');
   const coffee = byPath.get('products/journey-product-coffee');
   const publicCoffee = byPath.get('storefront_products/journey-product-coffee');
   const water = byPath.get('products/journey-product-water');
   const publicWater = byPath.get('storefront_products/journey-product-water');
+  const northProduct = byPath.get('products/journey-product-north-special');
+  const publicNorthProduct = byPath.get('storefront_products/journey-product-north-special');
   const order = byPath.get('storefront_orders/journey-order-001');
 
   assert.equal(owner.email, journeyAccounts.ownerEmail);
@@ -139,11 +148,16 @@ test('builds a linked account-to-storefront journey with registered customer che
   assert.equal(mainStore.companyId, 'sample-company-001');
   assert.equal(northStore.companyId, 'sample-company-001');
   assert.equal(publicMainStore.companyId, 'sample-company-001');
+  assert.equal(mainBranch.storeId, 'journey-store-main');
+  assert.equal(publicMainBranch.storeId, mainBranch.storeId);
+  assert.equal(publicNorthBranch.storeId, northBranch.storeId);
   assert.equal(coffee.uid, journeyAccounts.ownerUid);
   assert.equal(coffee.storeId, 'journey-store-main');
   assert.equal(publicCoffee.storeId, coffee.storeId);
   assert.equal(water.companyId, 'sample-company-001');
   assert.equal(publicWater.storeId, water.storeId);
+  assert.equal(northProduct.storeId, northBranch.storeId);
+  assert.equal(publicNorthProduct.storeId, northProduct.storeId);
   assert.equal(Object.hasOwn(publicCoffee, 'costPrice'), false);
   assert.equal(Object.hasOwn(publicCoffee, 'uid'), false);
   assert.equal(Object.hasOwn(publicCoffee, 'totalStock'), false);

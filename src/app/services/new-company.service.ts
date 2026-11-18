@@ -125,13 +125,15 @@ export class NewCompanyService {
         for (const branch of branches) {
           const newBranch = {
             ...branch,
+            uid: this.authService.getCurrentUser()?.uid || branch.uid,
             companyId,
             storeId: storeId,
             createdAt: new Date(),
             updatedAt: new Date()
           };
           // 🔥 NEW APPROACH: Use OfflineDocumentService for offline-safe creation
-          await this.offlineDocService.createDocument(this.branchesCollection, newBranch);
+          const branchId = await this.offlineDocService.createDocument(this.branchesCollection, newBranch);
+          await this.storefrontPublication.syncBranch(branchId, newBranch);
         }
       }
     }
@@ -191,10 +193,11 @@ export class NewCompanyService {
     const branchesSnapshot = await getDocs(branchesQuery);
     
     for (const branchDoc of branchesSnapshot.docs) {
-  await this.offlineDocService.deleteDocument(this.branchesCollection, branchDoc.id);
+      await this.storefrontPublication.removeBranch(branchDoc.id);
+      await this.offlineDocService.deleteDocument(this.branchesCollection, branchDoc.id);
     }
 
-    // Hide the public storefront branch before deleting its source document.
+    // Hide the public store before deleting its source document.
     await this.storefrontPublication.removeStore(storeId);
 
     // Then delete the store
@@ -215,14 +218,20 @@ export class NewCompanyService {
     return documentId;
   }
 
-  async createBranch(data: Omit<Branch, 'id' | 'updatedAt'>) {
+  async createBranch(data: Omit<Branch, 'id' | 'updatedAt' | 'uid'>) {
+    const user = this.authService.getCurrentUser();
+    if (!user) {
+      throw new Error('An authenticated user is required to create a branch.');
+    }
     const cleanBranch = this.removeUndefinedValues(data);
     const newBranch = {
       ...cleanBranch,
+      uid: user.uid,
       updatedAt: new Date()
     };
     // 🔥 NEW APPROACH: Use OfflineDocumentService for offline-safe creation
     const documentId = await this.offlineDocService.createDocument(this.branchesCollection, newBranch);
+    await this.storefrontPublication.syncBranch(documentId, newBranch);
     console.log('✅ Branch created with ID:', documentId, navigator.onLine ? '(online)' : '(offline)');
     return documentId;
   }

@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Firestore, deleteDoc, doc, getDoc, setDoc } from '@angular/fire/firestore';
 import { Product } from '../interfaces/product.interface';
+import { Branch } from '../interfaces/branch.interface';
 import { Company } from '../interfaces/company.interface';
 import { Store } from '../interfaces/store.interface';
 
@@ -20,6 +21,15 @@ export interface PublicStorefrontStore {
   logoUrl?: string;
 }
 
+export interface PublicStorefrontBranch {
+  companyId: string;
+  storeId: string;
+  name: string;
+  address: string;
+  status: 'active';
+  storeHours: string;
+}
+
 export interface PublicStorefrontProduct {
   storeId: string;
   productName: string;
@@ -31,6 +41,41 @@ export interface PublicStorefrontProduct {
   unitType?: string;
   imageUrl?: string;
   currency: string;
+}
+
+export function toPublicStorefrontBranch(branch: Partial<Branch>): PublicStorefrontBranch | null {
+  const name = branch.name?.trim();
+  if (branch.isActive !== true || !branch.companyId || !branch.storeId || !name) {
+    return null;
+  }
+
+  const address = branch.address;
+  const formattedAddress = typeof address === 'string'
+    ? address
+    : address
+      ? [
+          address.street,
+          address.city,
+          address.state,
+          address.zipCode,
+          address.country
+        ].filter((part): part is string => typeof part === 'string' && part.trim().length > 0).join(', ')
+      : '';
+  const operatingHours = branch.settings?.operatingHours || [];
+  const firstOpenHours = operatingHours.find(slot =>
+    slot.isOpen && slot.openTime && slot.closeTime
+  );
+
+  return {
+    companyId: branch.companyId,
+    storeId: branch.storeId,
+    name,
+    address: formattedAddress,
+    status: 'active',
+    storeHours: firstOpenHours
+      ? `${firstOpenHours.openTime} - ${firstOpenHours.closeTime}`
+      : 'Hours not listed'
+  };
 }
 
 export function toPublicStorefrontStore(store: Partial<Store>): PublicStorefrontStore | null {
@@ -110,6 +155,16 @@ export class StorefrontPublicationService {
     await setDoc(reference, projection);
   }
 
+  async syncBranch(branchId: string, branch: Partial<Branch>): Promise<void> {
+    const projection = toPublicStorefrontBranch(branch);
+    const reference = doc(this.firestore, 'storefront_branches', branchId);
+    if (!projection) {
+      await deleteDoc(reference);
+      return;
+    }
+    await setDoc(reference, projection);
+  }
+
   async syncCompany(companyId: string, company: Partial<Company>): Promise<void> {
     const projection = toPublicStorefrontCompany(companyId, company);
     if (!projection) {
@@ -152,6 +207,10 @@ export class StorefrontPublicationService {
 
   async removeStore(storeId: string): Promise<void> {
     await deleteDoc(doc(this.firestore, 'storefront_stores', storeId));
+  }
+
+  async removeBranch(branchId: string): Promise<void> {
+    await deleteDoc(doc(this.firestore, 'storefront_branches', branchId));
   }
 
   async syncProduct(productId: string, product: Partial<Product>): Promise<void> {

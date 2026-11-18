@@ -5,7 +5,7 @@
     "journey": [
       "Owner registers an account in Firebase Authentication.",
       "Owner creates a company.",
-      "Owner creates branches; storefront branches are stored as top-level stores documents.",
+      "Owner creates branch documents linked to their stores by storeId.",
       "Owner creates active products for the main branch.",
       "A visitor browses the main branch and adds products to a cart; browsing itself creates no Firestore document.",
       "Visitor registers a separate account; the new account receives the customer permission.",
@@ -14,11 +14,11 @@
     "notes": [
       "Create the owner Firebase Authentication account in the app first. Firestore fixtures cannot create Auth accounts or passwords.",
       "Replace the owner UID and email placeholders with the values from the account created in the app.",
-      "For this storefront flow, each branch is a top-level stores document; the branch selector uses the store document ID as storeId.",
+      "Branch documents are projected into storefront_branches for public browsing. Each branch's storeId links it to products in the products collection.",
       "The shopper in this fixture is a sample-only profile and cannot sign in; use a real shopper UID/email if you want a sign-in-capable customer.",
       "Public storefront documents contain only browse-safe fields; internal store and product documents remain private.",
       "To browse this sample company, open /branches?companyId=sample-company-001.",
-      "The current storefront checkout UI still writes guest orders; this fixture does not change that UI behavior."
+      "Checkout requires a signed-in customer and links the order to that customer's UID."
     ]
   },
   "documents": [
@@ -111,6 +111,53 @@
       }
     },
     {
+      "path": "branches/journey-branch-main",
+      "data": {
+        "uid": "{{OWNER_UID}}",
+        "companyId": "sample-company-001",
+        "storeId": "journey-store-main",
+        "name": "Main Branch",
+        "address": {
+          "street": "10 Test Street",
+          "city": "Manila",
+          "state": "Metro Manila",
+          "zipCode": "1000",
+          "country": "Philippines"
+        },
+        "businessType": "retail",
+        "isActive": true,
+        "assignedUsers": ["{{OWNER_UID}}"],
+        "settings": {
+          "operatingHours": [
+            { "dayOfWeek": 1, "isOpen": true, "openTime": "09:00", "closeTime": "18:00" }
+          ],
+          "contactInfo": {
+            "phone": "+630000000001",
+            "email": "{{OWNER_EMAIL}}"
+          },
+          "posSettings": {
+            "enableCustomerDisplay": false,
+            "requireSignature": false,
+            "allowDiscounts": true,
+            "maxDiscountPercent": 20
+          }
+        },
+        "createdAt": "2026-03-01T09:10:00.000Z",
+        "updatedAt": "2026-03-01T09:10:00.000Z"
+      }
+    },
+    {
+      "path": "storefront_branches/journey-branch-main",
+      "data": {
+        "companyId": "sample-company-001",
+        "storeId": "journey-store-main",
+        "name": "Main Branch",
+        "address": "10 Test Street, Manila, Metro Manila, 1000, Philippines",
+        "status": "active",
+        "storeHours": "09:00 - 18:00"
+      }
+    },
+    {
       "path": "stores/journey-store-north",
       "data": {
         "uid": "{{OWNER_UID}}",
@@ -149,6 +196,53 @@
         "branchName": "North Branch",
         "address": "25 Test Avenue, Quezon City",
         "status": "active"
+      }
+    },
+    {
+      "path": "branches/journey-branch-north",
+      "data": {
+        "uid": "{{OWNER_UID}}",
+        "companyId": "sample-company-001",
+        "storeId": "journey-store-north",
+        "name": "North Branch",
+        "address": {
+          "street": "25 Test Avenue",
+          "city": "Quezon City",
+          "state": "Metro Manila",
+          "zipCode": "1100",
+          "country": "Philippines"
+        },
+        "businessType": "retail",
+        "isActive": true,
+        "assignedUsers": ["{{OWNER_UID}}"],
+        "settings": {
+          "operatingHours": [
+            { "dayOfWeek": 1, "isOpen": true, "openTime": "10:00", "closeTime": "19:00" }
+          ],
+          "contactInfo": {
+            "phone": "+630000000002",
+            "email": "{{OWNER_EMAIL}}"
+          },
+          "posSettings": {
+            "enableCustomerDisplay": false,
+            "requireSignature": false,
+            "allowDiscounts": true,
+            "maxDiscountPercent": 20
+          }
+        },
+        "createdAt": "2026-03-01T09:15:00.000Z",
+        "updatedAt": "2026-03-01T09:15:00.000Z"
+      }
+    },
+    {
+      "path": "storefront_branches/journey-branch-north",
+      "data": {
+        "companyId": "sample-company-001",
+        "storeId": "journey-store-north",
+        "name": "North Branch",
+        "address": "25 Test Avenue, Quezon City, Metro Manila, 1100, Philippines",
+        "status": "active",
+        "storeHours": "10:00 - 19:00"
       }
     },
     {
@@ -246,6 +340,49 @@
         "skuId": "BW-002",
         "category": "Beverages",
         "unitType": "bottles",
+        "currency": "PHP"
+      }
+    },
+    {
+      "path": "products/journey-product-north-special",
+      "data": {
+        "uid": "{{OWNER_UID}}",
+        "createdBy": "{{OWNER_UID}}",
+        "updatedBy": "{{OWNER_UID}}",
+        "productName": "North Branch Special",
+        "description": "A product available at the North Branch.",
+        "skuId": "NBS-003",
+        "productCode": "NBS003",
+        "unitType": "pieces",
+        "category": "Specials",
+        "totalStock": 5,
+        "costPrice": 100,
+        "originalPrice": 180,
+        "sellingPrice": 180,
+        "companyId": "sample-company-001",
+        "storeId": "journey-store-north",
+        "isVatApplicable": false,
+        "hasDiscount": false,
+        "discountType": "percentage",
+        "discountValue": 0,
+        "isStockTracked": false,
+        "status": "active",
+        "createdAt": "2026-03-01T09:45:00.000Z",
+        "updatedAt": "2026-03-01T09:45:00.000Z",
+        "lastUpdated": "2026-03-01T09:45:00.000Z"
+      }
+    },
+    {
+      "path": "storefront_products/journey-product-north-special",
+      "data": {
+        "storeId": "journey-store-north",
+        "productName": "North Branch Special",
+        "sellingPrice": 180,
+        "status": "active",
+        "description": "A product available at the North Branch.",
+        "skuId": "NBS-003",
+        "category": "Specials",
+        "unitType": "pieces",
         "currency": "PHP"
       }
     },

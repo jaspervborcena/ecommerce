@@ -65,9 +65,9 @@ Writes use the Admin SDK, so Firestore security rules do not restrict system-man
 
 The JSON records the final state of these journey steps: the owner registers, creates a company, branches, and products; a visitor browses without producing a document; then a separate shopper registers and checks out as a customer.
 
-The fixture mirrors the storefront branch selector: branches are top-level `stores` documents, and their document IDs are used as `storeId`. Create the owner Firebase Authentication account in the app first. The shopper profile is sample-only and cannot sign in; pass a real shopper UID/email instead if you need a sign-in-capable customer. No passwords are stored.
+The fixture mirrors the branch and product relationships in the app: each top-level `branches` document references a `stores` document through `storeId`, and products use that same `storeId`. Public branch details are copied to `storefront_branches`; selecting a branch opens the products linked to its store. Create the owner Firebase Authentication account in the app first. The shopper profile is sample-only and cannot sign in; pass a real shopper UID/email instead if you need a sign-in-capable customer. No passwords are stored.
 
-The fixture writes `storefront_companies`, `storefront_stores`, and `storefront_products` projections containing only public lookup and browsing fields; private company, store, and product documents are not readable anonymously. For this sample company, open `/branches?companyId=sample-company-001`; selecting a branch opens its product storefront. Deploy the updated Firestore rules and app before anonymous browsing will work in the live site.
+The fixture writes `storefront_companies`, `storefront_branches`, and `storefront_products` projections containing only public lookup and browsing fields; private company, branch, store, and product documents are not readable anonymously. For this sample company, open `/branches?companyId=sample-company-001`; selecting a branch opens its linked store's product storefront. Deploy the updated Firestore rules and app before anonymous browsing will work in the live site.
 
 From the repository root, preview the journey fixture without writing:
 
