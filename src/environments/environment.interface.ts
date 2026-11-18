@@ -1,6 +1,7 @@
 export interface AppEnvironment {
   production: boolean;
   version: string;
+  companyId: string;
   companySlug: string;
   firebase: {
     apiKey: string;

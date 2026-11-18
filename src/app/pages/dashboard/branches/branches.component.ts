@@ -121,10 +121,10 @@ export class BranchesComponent implements OnInit {
 
     try {
       const companyIdOverride = this.route.snapshot.queryParamMap.get('companyId');
-      const company = companyIdOverride
-        ? { companyId: companyIdOverride }
-        : await this.storefrontPublication.getCompanyBySlug(environment.companySlug);
-      const companyId = company?.companyId || '';
+      const companyId = companyIdOverride ||
+        environment.companyId ||
+        (await this.storefrontPublication.getCompanyBySlug(environment.companySlug))?.companyId ||
+        '';
       console.log('🌿 BranchesComponent: Loading branches for companyId:', companyId);
 
       if (!companyId) {

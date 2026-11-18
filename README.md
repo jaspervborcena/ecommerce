@@ -1,6 +1,6 @@
 # Tovrika Ecommerce
 
-Tovrika is a multi-branch commerce app with account setup, company onboarding, public branch and product browsing, cart, and checkout flows. Firebase project configuration and the storefront company slug are supplied by the Angular environment files.
+Tovrika is a multi-branch commerce app with account setup, company onboarding, public branch and product browsing, cart, and checkout flows. Firebase project configuration and the storefront company ID and slug are supplied by the Angular environment files.
 
 The current UI keeps authentication and account recovery, home, onboarding, company setup, branch browsing, and storefront checkout. Other management and operations screens are intentionally removed while the app is being simplified.
 
@@ -152,7 +152,7 @@ Role-based users can also shop as customers. Their operational permissions must 
 ## Notes for implementation
 
 - keep only the current onboarding, auth, branch browsing, and storefront routes active
-- use `companySlug` in the Angular environment to resolve the public company projection
+- use `companyId` in the Angular environment for storefront branch lookup, with `companySlug` as a fallback
 - model branches as first-class operational units under Shao Tang
 - keep inventory, fulfillment, and permissions scoped to the correct branch
 - calculate commissions on the server after payment and order status updates

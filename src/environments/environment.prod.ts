@@ -2,7 +2,8 @@
 export const environment = {
   production: true,
   version: '1.0.2',
-  companySlug: 'bentamu',
+  companyId: 'LnC9a2KOhNW8wtSverZx',
+  companySlug: 'tovrika',
   firebase: {
     apiKey: "AIzaSyDNIYovvzNKVj40h99kxOHu5yfEUzx7OYA",
     authDomain: "jasperpos-1dfd5.firebaseapp.com",
