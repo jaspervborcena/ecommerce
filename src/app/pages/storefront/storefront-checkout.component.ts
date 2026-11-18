@@ -111,12 +111,12 @@ export class StorefrontCheckoutComponent {
         currency: snapshot.currency,
         storeId: snapshot.storeId,
         roleId: 'customer',
-        status: 'pending'
+        status: 'REQUEST'
       };
 
       await addDoc(collection(this.firestore, 'storefront_orders'), order as any);
       this.cartService.clear();
-      this.message.set('Order placed successfully.');
+      this.message.set('Your order request was sent to the store.');
       this.isSuccess.set(true);
       this.form.reset();
       window.setTimeout(() => this.router.navigate(['/store/' + snapshot.storeId]), 700);

@@ -149,7 +149,12 @@ service cloud.firestore {
       allow create: if isAuthenticated() &&
         request.resource.data.uid == request.auth.uid &&
         request.resource.data.roleId == 'customer' &&
-        request.resource.data.status == 'pending';
+        request.resource.data.status == 'REQUEST' &&
+        request.resource.data.storeId is string &&
+        request.resource.data.customerName is string &&
+        request.resource.data.email is string &&
+        request.resource.data.items is list &&
+        request.resource.data.total is number;
       allow read: if isAuthenticated() &&
         resource.data.uid == request.auth.uid;
       allow update, delete: if false;

@@ -1,9 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Firestore, collection, doc, getDoc, query, where, getDocs } from '@angular/fire/firestore';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { StorefrontCartService } from '../../services/storefront-cart.service';
 import { PublicStorefrontStore } from '../../services/storefront-publication.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-storefront-list',
@@ -46,6 +47,7 @@ import { PublicStorefrontStore } from '../../services/storefront-publication.ser
         </div>
         <div class="flex items-center gap-3">
           <div *ngIf="isLoading()" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600">Loading products...</div>
+          <a *ngIf="canManageOrders()" routerLink="/store-orders" class="storefront-pill">Online orders</a>
           <a routerLink="/branches" class="storefront-pill">&larr; Back to branches</a>
         </div>
       </div>
@@ -91,8 +93,14 @@ export class StorefrontListComponent {
   private firestore = inject(Firestore);
   private route = inject(ActivatedRoute);
   private cartService = inject(StorefrontCartService);
+  private authService = inject(AuthService);
 
   products = signal<any[]>([]);
+  canManageOrders = computed(() =>
+    ['creator', 'store_manager', 'manager', 'cashier', 'attendant'].includes(
+      this.authService.getCurrentPermission()?.roleId || ''
+    )
+  );
   storeName = signal('Storefront');
   branchName = signal('');
   isLoading = signal<boolean>(true);

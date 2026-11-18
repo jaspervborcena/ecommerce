@@ -18,6 +18,7 @@ export const environment = {
     baseUrl: "",
     ordersApi: "",
     directOrdersApi: "",
+    storefrontOrdersApi: "https://asia-east1-jasperpos-1dfd5.cloudfunctions.net/integrations/v1/storefront/orders",
   },
   inventory: {
     reconciliationMode: 'recon' as 'legacy' | 'recon'

@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { checkoutAuthGuard } from './guards/auth.guard';
+import { roleGuard } from './guards/role.guard';
 
 export const routes: Routes = [
   {
@@ -42,6 +43,12 @@ export const routes: Routes = [
     path: 'checkout',
     canActivate: [checkoutAuthGuard],
     loadComponent: () => import('./pages/storefront/storefront-checkout.component').then(m => m.StorefrontCheckoutComponent)
+  },
+  {
+    path: 'store-orders',
+    canActivate: [roleGuard],
+    data: { roles: ['creator', 'store_manager', 'manager', 'cashier', 'attendant'] },
+    loadComponent: () => import('./pages/storefront/storefront-orders.component').then(m => m.StorefrontOrdersComponent)
   },
   {
     path: 'login',
