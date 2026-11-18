@@ -116,7 +116,8 @@ service cloud.firestore {
     }
 
     match /storefront_stores/{storeId} {
-      allow read: if isSafePublicStorefrontStore(resource.data);
+      allow get: if isSafePublicStorefrontStore(resource.data);
+      allow list: if resource.data.status == 'active';
       allow create, update: if isAuthenticated() &&
         getAfter(/databases/$(database)/documents/stores/$(storeId)).data.uid == request.auth.uid &&
         isSafePublicStorefrontStore(request.resource.data);

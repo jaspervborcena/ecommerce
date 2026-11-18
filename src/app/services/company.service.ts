@@ -130,6 +130,22 @@ export class CompanyService {
     }
   }
 
+  async refreshStorefrontStores(companyId: string): Promise<void> {
+    const user = this.authService.getCurrentUser();
+    if (!user || !companyId) {
+      return;
+    }
+
+    const storesRef = collection(this.firestore, 'stores');
+    const ownedStores = await getDocs(query(storesRef, where('uid', '==', user.uid)));
+    for (const storeDoc of ownedStores.docs) {
+      const store = storeDoc.data() as Partial<Store>;
+      if (store.companyId === companyId) {
+        await this.storefrontPublication.syncStore(storeDoc.id, store);
+      }
+    }
+  }
+
   async loadCompanies() {
     try {
       const user = this.authService.getCurrentUser();
@@ -187,6 +203,11 @@ export class CompanyService {
                 await this.refreshStorefrontBranches(companyDoc.id);
               } catch (branchPublicationError) {
                 console.warn('CompanyService: Could not refresh public branch listings.', branchPublicationError);
+              }
+              try {
+                await this.refreshStorefrontStores(companyDoc.id);
+              } catch (storePublicationError) {
+                console.warn('CompanyService: Could not refresh public store listings.', storePublicationError);
               }
             }
 

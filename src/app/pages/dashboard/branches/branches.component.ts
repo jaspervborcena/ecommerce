@@ -5,8 +5,11 @@ import { Firestore, collection, getDocs, query, where } from '@angular/fire/fire
 import { environment } from '../../../../environments/environment';
 import { runInInjectionContext } from '@angular/core';
 import { StoreSelectionService } from '../../../services/store-selection.service';
-import { StorefrontPublicationService } from '../../../services/storefront-publication.service';
-import { PublicStorefrontBranch } from '../../../services/storefront-publication.service';
+import {
+  PublicStorefrontBranch,
+  PublicStorefrontStore,
+  StorefrontPublicationService
+} from '../../../services/storefront-publication.service';
 import { CompanyService } from '../../../services/company.service';
 
 @Component({
@@ -141,6 +144,11 @@ export class BranchesComponent implements OnInit {
       } catch (publicationError) {
         console.warn('BranchesComponent: Could not refresh owner branch projections.', publicationError);
       }
+      try {
+        await this.companyService.refreshStorefrontStores(companyId);
+      } catch (publicationError) {
+        console.warn('BranchesComponent: Could not refresh owner store projections.', publicationError);
+      }
 
       const branchesRef = collection(this.firestore, 'storefront_branches');
       const branchesQuery = query(
@@ -150,7 +158,14 @@ export class BranchesComponent implements OnInit {
       );
       const snapshot = await getDocs(branchesQuery);
 
-      const normalized = snapshot.docs.map(docSnap => {
+      const normalized: Array<{
+        id: string;
+        branchName: string;
+        address: string;
+        status: string;
+        storeHours: string;
+        storeId: string;
+      }> = snapshot.docs.map(docSnap => {
         const data = docSnap.data() as PublicStorefrontBranch;
         return {
           id: docSnap.id,
@@ -161,6 +176,27 @@ export class BranchesComponent implements OnInit {
           storeId: data.storeId
         };
       });
+
+      if (normalized.length === 0) {
+        const storesRef = collection(this.firestore, 'storefront_stores');
+        const storesQuery = query(
+          storesRef,
+          where('companyId', '==', companyId),
+          where('status', '==', 'active')
+        );
+        const storeSnapshot = await getDocs(storesQuery);
+        normalized.push(...storeSnapshot.docs.map(docSnap => {
+          const data = docSnap.data() as PublicStorefrontStore;
+          return {
+            id: docSnap.id,
+            branchName: data.branchName || data.storeName,
+            address: data.address,
+            status: data.status,
+            storeHours: 'Hours not listed',
+            storeId: docSnap.id
+          };
+        }));
+      }
 
       console.log('🌿 BranchesComponent: Normalized locations:', {
         count: normalized.length,
