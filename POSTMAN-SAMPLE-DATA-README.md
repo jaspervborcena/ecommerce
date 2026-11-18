@@ -57,7 +57,7 @@ The command is a dry run unless `--apply` is provided. To write, use an isolated
 npm run backfill:sample-data -- --project-id <test-project-id> --apply
 ```
 
-Writes use the Admin SDK, so Firestore security rules do not restrict system-managed sample collections. The script refuses to apply writes to projects listed in `.firebaserc` unless `FIRESTORE_EMULATOR_HOST` is set. Re-running it updates the same reserved sample document IDs. It does not create Firebase Authentication users, and the placeholder UIDs cannot sign in.
+Writes use the Admin SDK, so Firestore security rules do not restrict system-managed sample collections. The script refuses to apply writes to projects listed in `.firebaserc` unless `FIRESTORE_EMULATOR_HOST` is set or `--allow-configured-project` is explicitly passed. Re-running it updates the same reserved sample document IDs. It does not create Firebase Authentication users, and the placeholder UIDs cannot sign in.
 
 ## Related project documentation
 

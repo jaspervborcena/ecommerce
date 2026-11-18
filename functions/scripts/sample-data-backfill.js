@@ -350,10 +350,12 @@ export async function insertSampleDocuments(db, documents) {
 }
 
 function parseArguments(args) {
-  const options = { apply: false, projectId: '' };
+  const options = { apply: false, allowConfiguredProject: false, projectId: '' };
   for (let index = 0; index < args.length; index += 1) {
     if (args[index] === '--apply') {
       options.apply = true;
+    } else if (args[index] === '--allow-configured-project') {
+      options.allowConfiguredProject = true;
     } else if (args[index] === '--project-id' && args[index + 1]) {
       options.projectId = args[index + 1];
       index += 1;
@@ -367,13 +369,17 @@ function parseArguments(args) {
   return options;
 }
 
-async function assertNotConfiguredProject(projectId) {
+async function assertNotConfiguredProject(projectId, allowConfiguredProject) {
   const firebaseRcPath = path.join(repositoryRoot, '.firebaserc');
   const firebaseRc = JSON.parse(await readFile(firebaseRcPath, 'utf8'));
   const configuredProjects = Object.values(firebaseRc.projects || {});
-  if (!process.env.FIRESTORE_EMULATOR_HOST && configuredProjects.includes(projectId)) {
+  if (
+    !process.env.FIRESTORE_EMULATOR_HOST &&
+    configuredProjects.includes(projectId) &&
+    !allowConfiguredProject
+  ) {
     throw new Error(
-      'Refusing to write to a project configured as a dev/prod alias. Use the Firestore Emulator or a separate test project.'
+      'Refusing to write to a project configured as a dev/prod alias. Use the Firestore Emulator, a separate test project, or explicitly pass --allow-configured-project.'
     );
   }
 }
@@ -391,7 +397,7 @@ async function main() {
       return;
     }
 
-    await assertNotConfiguredProject(options.projectId);
+    await assertNotConfiguredProject(options.projectId, options.allowConfiguredProject);
     const { initializeApp, getApps } = await import('firebase-admin/app');
     const { getFirestore } = await import('firebase-admin/firestore');
     const app = getApps()[0] || initializeApp({ projectId: options.projectId });
