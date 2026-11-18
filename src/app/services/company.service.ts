@@ -114,6 +114,22 @@ export class CompanyService {
     return companies[0];
   }
 
+  async refreshStorefrontBranches(companyId: string): Promise<void> {
+    const user = this.authService.getCurrentUser();
+    if (!user || !companyId) {
+      return;
+    }
+
+    const branchesRef = collection(this.firestore, 'branches');
+    const ownedBranches = await getDocs(query(branchesRef, where('uid', '==', user.uid)));
+    for (const branchDoc of ownedBranches.docs) {
+      const branch = branchDoc.data() as Partial<Branch>;
+      if (branch.companyId === companyId) {
+        await this.storefrontPublication.syncBranch(branchDoc.id, branch);
+      }
+    }
+  }
+
   async loadCompanies() {
     try {
       const user = this.authService.getCurrentUser();
@@ -168,14 +184,7 @@ export class CompanyService {
                 console.warn('CompanyService: Could not refresh the public company lookup.', publicationError);
               }
               try {
-                const branchesRef = collection(this.firestore, 'branches');
-                const ownedBranches = await getDocs(query(branchesRef, where('uid', '==', user.uid)));
-                for (const branchDoc of ownedBranches.docs) {
-                  const branch = branchDoc.data() as Partial<Branch>;
-                  if (branch.companyId === companyDoc.id) {
-                    await this.storefrontPublication.syncBranch(branchDoc.id, branch);
-                  }
-                }
+                await this.refreshStorefrontBranches(companyDoc.id);
               } catch (branchPublicationError) {
                 console.warn('CompanyService: Could not refresh public branch listings.', branchPublicationError);
               }

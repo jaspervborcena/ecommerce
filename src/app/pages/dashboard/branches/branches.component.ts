@@ -7,6 +7,7 @@ import { runInInjectionContext } from '@angular/core';
 import { StoreSelectionService } from '../../../services/store-selection.service';
 import { StorefrontPublicationService } from '../../../services/storefront-publication.service';
 import { PublicStorefrontBranch } from '../../../services/storefront-publication.service';
+import { CompanyService } from '../../../services/company.service';
 
 @Component({
   selector: 'app-branches',
@@ -80,6 +81,7 @@ export class BranchesComponent implements OnInit {
   private injector = inject(Injector);
   private storeSelectionService = inject(StoreSelectionService);
   private storefrontPublication = inject(StorefrontPublicationService);
+  private companyService = inject(CompanyService);
 
   protected availableLocations = signal<Array<{
     id: string;
@@ -132,6 +134,12 @@ export class BranchesComponent implements OnInit {
         this.availableLocations.set([]);
         this.isLoading.set(false);
         return;
+      }
+
+      try {
+        await this.companyService.refreshStorefrontBranches(companyId);
+      } catch (publicationError) {
+        console.warn('BranchesComponent: Could not refresh owner branch projections.', publicationError);
       }
 
       const branchesRef = collection(this.firestore, 'storefront_branches');
