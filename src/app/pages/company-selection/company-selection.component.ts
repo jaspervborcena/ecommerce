@@ -222,8 +222,8 @@ export class CompanySelectionComponent {
       // Update the user's selected company
       await this.authService.selectCompany(companyId);
       
-      // Navigate to dashboard
-      await this.router.navigate(['/dashboard']);
+      // Continue to the streamlined onboarding flow.
+      await this.router.navigate(['/onboarding']);
       
     } catch (error) {
       console.error('Error selecting company:', error);

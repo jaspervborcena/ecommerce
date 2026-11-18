@@ -5,7 +5,6 @@ import { AuthService } from '../../services/auth.service';
 import { LogoComponent } from '../../shared/components/logo/logo.component';
 import { AppConstants } from '../../shared/enums';
 import { NetworkService } from '../../core/services/network.service';
-import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-onboarding',
@@ -112,9 +111,7 @@ export class OnboardingComponent {
 
   selectBranch(branchId: string) {
     this.selectedBranchId = branchId;
-    this.router.navigate(['/product-listing'], {
-      queryParams: { storeId: branchId }
-    });
+    this.router.navigate(['/store', branchId]);
   }
 
   openDatePicker(datePicker: HTMLInputElement) {
@@ -134,24 +131,6 @@ export class OnboardingComponent {
 
     const [year, month, day] = date.split('-');
     this.pickupDate = `${month}/${day}/${year}`;
-  }
-
-  navigateToDashboard() {
-    const role = this.userRole();
-    const currentUser = this.currentUser();
-    const currentPermission = this.authService.getCurrentPermission();
-    
-    // Check if user has valid permissions (not visitor)
-    const isVisitor = !currentPermission || 
-                     !currentPermission.companyId || 
-                     currentPermission.companyId.trim() === '' || 
-                     currentPermission.roleId === 'visitor';
-    
-    if (isVisitor) {
-      return;
-    }
-    
-    this.router.navigate(['/dashboard']);
   }
 
   async logout() {
@@ -185,15 +164,15 @@ export class OnboardingComponent {
     const isVisitor = !currentPermission?.companyId || currentPermission.roleId === 'visitor';
 
     if (!isVisitor) {
-      console.warn('🏪 Onboarding: User is not a visitor, redirecting to dashboard');
-      await this.router.navigate(['/dashboard']);
+      console.warn('🏪 Onboarding: User already has a company, opening company setup');
+      await this.router.navigate(['/create-company']);
       return;
     }
 
-    await this.router.navigate(['/dashboard/company-profile']);
+    await this.router.navigate(['/create-company']);
   } catch (error) {
     console.error('🏪 Onboarding: Error navigating to company profile:', error);
-    await this.router.navigate(['/dashboard']);
+    await this.router.navigate(['/create-company']);
   }
 }
 

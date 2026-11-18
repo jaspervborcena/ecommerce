@@ -33,10 +33,10 @@ export const onboardingGuard: CanActivateFn = async (route, state) => {
   // Step 1: Check company profile - but allow branches during onboarding
   if (!currentPermission?.companyId) {
     // Allow branches and company-profile routes during onboarding
-    if (state.url.includes('/branches') || state.url.includes('/dashboard/company-profile')) {
+    if (state.url.includes('/branches') || state.url.includes('/create-company')) {
       return true;
     }
-    router.navigate(['/dashboard/company-profile']);
+    router.navigate(['/create-company']);
     return false;
   }
 
@@ -44,7 +44,7 @@ export const onboardingGuard: CanActivateFn = async (route, state) => {
   const company = await companyService.getActiveCompany();
   
   if (!company) {
-    router.navigate(['/dashboard/company-profile']);
+    router.navigate(['/create-company']);
     return false;
   }
   
@@ -58,11 +58,10 @@ export const onboardingGuard: CanActivateFn = async (route, state) => {
 
   if (!stores || stores.length === 0) {
     // Only allow onboarding routes if no stores exist
-    if (state.url.includes('stores') || state.url.includes('products')) {
+    if (state.url.includes('/branches') || state.url.includes('/create-company')) {
       return true;
     }
-    // Restrict other routes, redirect to stores management
-    router.navigate(['/dashboard/stores']);
+    router.navigate(['/branches']);
     return false;
   }
 
@@ -71,7 +70,7 @@ export const onboardingGuard: CanActivateFn = async (route, state) => {
     await companyService.loadCompanies();
     const company = await companyService.getActiveCompany();
     if (!company) {
-      router.navigate(['/dashboard/company-profile']);
+      router.navigate(['/create-company']);
       return false;
     }
 
@@ -86,8 +85,8 @@ export const onboardingGuard: CanActivateFn = async (route, state) => {
       hasValidStore = stores.some(store => store.id === currentPermission.storeId);
     }
 
-    if (!hasValidStore && !state.url.includes('stores')) {
-      router.navigate(['/dashboard/stores']);
+    if (!hasValidStore && !state.url.includes('/branches')) {
+      router.navigate(['/branches']);
       return false;
     }
 
@@ -96,7 +95,7 @@ export const onboardingGuard: CanActivateFn = async (route, state) => {
     return true;
   } catch (error) {
     console.error('[OnboardingGuard] Unexpected error:', error);
-    router.navigate(['/dashboard/company-profile']);
+    router.navigate(['/create-company']);
     return false;
   }
 };
@@ -130,7 +129,7 @@ export const companyProfileGuard: CanActivateFn = () => {
   // Use permission-based access control for existing users
   if (!accessService.canView('canViewCompanyProfile')) {
     console.warn('CompanyProfileGuard: Insufficient permission for company profile');
-    router.navigate(['/dashboard/overview']);
+    router.navigate(['/create-company']);
     return false;
   }
   return true;

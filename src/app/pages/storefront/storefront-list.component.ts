@@ -98,7 +98,7 @@ export class StorefrontListComponent {
     try {
       this.isLoading.set(true);
       const storeId = this.route.snapshot.paramMap.get('storeId') || '';
-      const productsRef = collection(this.firestore, 'products');
+      const productsRef = collection(this.firestore, 'storefront_products');
       const q = query(productsRef, where('storeId', '==', storeId), where('status', '==', 'active'));
       const snap = await getDocs(q as any);
       const items: any[] = [];

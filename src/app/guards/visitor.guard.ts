@@ -30,7 +30,7 @@ export const visitorGuard: CanActivateFn = (route, state) => {
     if (state.url === '/onboarding') {
       console.log('👤 VisitorGuard: User is visitor, allowing access to onboarding');
       return true;
-    } if (state.url === '/dashboard/company-profile') {
+    } if (state.url === '/create-company') {
       console.log('👤 VisitorGuard: User is visitor, allowing access to onboarding');
       return true;
     } else {
@@ -41,10 +41,10 @@ export const visitorGuard: CanActivateFn = (route, state) => {
   }
 
   // User is NOT a visitor
-  // Only block the onboarding route for non-visitors; allow other routes (e.g., /dashboard) to proceed
+  // Only block the onboarding route for non-visitors; allow other routes to proceed
   if (state.url === '/onboarding') {
-    console.log('👤 VisitorGuard: Non-visitor attempting onboarding, redirecting to dashboard');
-    router.navigate(['/dashboard']);
+    console.log('👤 VisitorGuard: Non-visitor attempting onboarding, redirecting to company setup');
+    router.navigate(['/create-company']);
     return false;
   }
 

@@ -69,7 +69,7 @@ export class StorefrontDetailComponent {
         this.product.set(null);
         return;
       }
-      const ref = doc(this.firestore, 'products', id as string);
+      const ref = doc(this.firestore, 'storefront_products', id as string);
       const snap = await getDoc(ref as any);
       if (!snap.exists()) {
         this.product.set(null);

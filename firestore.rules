@@ -17,6 +17,47 @@ service cloud.firestore {
       return request.resource.data.uid == request.auth.uid;
     }
 
+    function isSafePublicStorefrontStore(data) {
+      return data.keys().hasOnly([
+          'companyId', 'storeName', 'branchName', 'address', 'status', 'logoUrl'
+        ]) &&
+        data.keys().hasAll(['companyId', 'storeName', 'branchName', 'address', 'status']) &&
+        data.companyId is string &&
+        data.storeName is string &&
+        data.branchName is string &&
+        data.address is string &&
+        data.status == 'active';
+    }
+
+    function isSafePublicStorefrontCompany(data) {
+      return data.keys().hasOnly(['companyId', 'slug', 'name', 'status']) &&
+        data.keys().hasAll(['companyId', 'slug', 'name', 'status']) &&
+        data.companyId is string &&
+        data.slug is string &&
+        data.name is string &&
+        data.status == 'active';
+    }
+
+    function isSafePublicStorefrontProduct(data) {
+      return data.keys().hasOnly([
+          'storeId', 'productName', 'sellingPrice', 'status', 'description',
+          'skuId', 'category', 'unitType', 'imageUrl', 'currency'
+        ]) &&
+        data.keys().hasAll(['storeId', 'productName', 'sellingPrice', 'status', 'currency']) &&
+        data.storeId is string &&
+        data.productName is string &&
+        data.sellingPrice is number &&
+        data.status == 'active' &&
+        data.currency is string;
+    }
+
+    function isStorefrontManagedPath(document) {
+      return document.matches('storefront_companies/[^/]+') ||
+        document.matches('storefront_stores/[^/]+') ||
+        document.matches('storefront_products/[^/]+') ||
+        document.matches('storefront_orders/[^/]+');
+    }
+
     // ===== MAIN COLLECTIONS WITH UID SECURITY =====
     
     // Products Collection - UID-based security
@@ -39,6 +80,53 @@ service cloud.firestore {
       // Allow delete if user owns the product
       allow delete: if isAuthenticated() && 
                     resource.data.uid == request.auth.uid;
+    }
+
+    // Public storefront projections contain only fields needed for browsing.
+    // The full stores/products documents remain private to authenticated users.
+    match /storefront_companies/{slug} {
+      allow read: if resource.data.slug == slug &&
+        isSafePublicStorefrontCompany(resource.data);
+      allow create: if isAuthenticated() &&
+        !exists(/databases/$(database)/documents/storefront_companies/$(slug)) &&
+        getAfter(/databases/$(database)/documents/companies/$(request.resource.data.companyId)).data.ownerUid == request.auth.uid &&
+        request.resource.data.slug == slug &&
+        isSafePublicStorefrontCompany(request.resource.data);
+      allow update: if isAuthenticated() &&
+        resource.data.companyId == request.resource.data.companyId &&
+        getAfter(/databases/$(database)/documents/companies/$(request.resource.data.companyId)).data.ownerUid == request.auth.uid &&
+        request.resource.data.slug == slug &&
+        isSafePublicStorefrontCompany(request.resource.data);
+      allow delete: if isAuthenticated() &&
+        get(/databases/$(database)/documents/companies/$(resource.data.companyId)).data.ownerUid == request.auth.uid;
+    }
+
+    match /storefront_stores/{storeId} {
+      allow read: if isSafePublicStorefrontStore(resource.data);
+      allow create, update: if isAuthenticated() &&
+        getAfter(/databases/$(database)/documents/stores/$(storeId)).data.uid == request.auth.uid &&
+        isSafePublicStorefrontStore(request.resource.data);
+      allow delete: if isAuthenticated() &&
+        get(/databases/$(database)/documents/stores/$(storeId)).data.uid == request.auth.uid;
+    }
+
+    match /storefront_products/{productId} {
+      allow read: if isSafePublicStorefrontProduct(resource.data);
+      allow create, update: if isAuthenticated() &&
+        getAfter(/databases/$(database)/documents/products/$(productId)).data.uid == request.auth.uid &&
+        isSafePublicStorefrontProduct(request.resource.data);
+      allow delete: if isAuthenticated() &&
+        get(/databases/$(database)/documents/products/$(productId)).data.uid == request.auth.uid;
+    }
+
+    match /storefront_orders/{orderId} {
+      allow create: if isAuthenticated() &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.roleId == 'customer' &&
+        request.resource.data.status == 'pending';
+      allow read: if isAuthenticated() &&
+        resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
     }
 
     // Product Inventory Collection - Read allowed for authenticated users, write requires UID
@@ -312,7 +400,7 @@ service cloud.firestore {
     
     // Any other collection requires authentication only (temporary permissive rule)
     match /{document=**} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if isAuthenticated() && !isStorefrontManagedPath(document);
     }
   }
 }

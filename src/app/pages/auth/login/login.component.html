@@ -100,7 +100,7 @@
         </button>
         
         <!-- Register Link -->
-        <a routerLink="/register" class="auth-link">
+        <a routerLink="/register" [queryParams]="returnUrl ? { returnUrl: returnUrl } : {}" class="auth-link">
           Don't have an account? Create one
         </a>
       </form>

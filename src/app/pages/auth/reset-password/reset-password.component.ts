@@ -113,7 +113,7 @@ type ResetState = 'loading' | 'form' | 'success' | 'error' | 'expired';
 
         <!-- Footer -->
         <div class="footer">
-          <p>Need help? <a href="/help">Contact Support</a></p>
+          <p>Need help? <a href="/onboarding">Get started</a></p>
         </div>
       </div>
     </div>

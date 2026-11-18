@@ -1,4 +1,4 @@
-import { Injectable, computed, signal, Injector, runInInjectionContext } from '@angular/core';
+import { Injectable, computed, signal, Injector, inject, runInInjectionContext } from '@angular/core';
 import {
   Firestore,
   collection,
@@ -21,12 +21,14 @@ import { AuthService } from './auth.service';
 import { FirestoreSecurityService } from '../core/services/firestore-security.service';
 import { OfflineDocumentService } from '../core/services/offline-document.service';
 import { IndexedDBService } from '../core/services/indexeddb.service';
+import { StorefrontPublicationService } from './storefront-publication.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CompanyService {
   private readonly companiesSignal = signal<Company[]>([]);
+  private readonly storefrontPublication = inject(StorefrontPublicationService);
 
   // Public signals and computed values
   readonly companies = computed(() => this.companiesSignal());
@@ -158,6 +160,14 @@ export class CompanyService {
             };
 
             companies.push(company);
+
+            if (company.ownerUid === user.uid) {
+              try {
+                await this.storefrontPublication.syncCompany(companyDoc.id, company);
+              } catch (publicationError) {
+                console.warn('CompanyService: Could not refresh the public company lookup.', publicationError);
+              }
+            }
 
             // Persist a local snapshot for offline use into the `companies` store
             try {
@@ -429,8 +439,11 @@ export class CompanyService {
 
   async deleteCompany(companyId: string) {
     try {
-  const companyRef = doc(this.firestore, `companies/${companyId}`);
-  await this.offlineDocService.deleteDocument('companies', companyId);
+      const company = this.companies().find(item => item.id === companyId);
+      if (company?.slug) {
+        await this.storefrontPublication.removeCompany(company.slug);
+      }
+      await this.offlineDocService.deleteDocument('companies', companyId);
       await this.loadCompanies(); // Reload to get fresh data
     } catch (error) {
       console.error('Error deleting company:', error);

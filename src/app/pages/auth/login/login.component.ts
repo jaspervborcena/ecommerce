@@ -91,12 +91,12 @@ export class LoginComponent implements OnInit {
         
         // In offline mode, skip policy-agreement to avoid chunk loading issues
         if (!this.isOnline()) {
-          console.log('🔐 Login: Offline mode - redirecting directly to dashboard...');
+          console.log('🔐 Login: Offline mode - redirecting to onboarding...');
           try {
-            await this.router.navigate(['/dashboard']);
-            console.log('🔐 Login: Navigation to dashboard successful');
+            await this.router.navigateByUrl(this.getSafeReturnUrl() || '/onboarding');
+            console.log('🔐 Login: Navigation to onboarding successful');
           } catch (navError) {
-            console.warn('🔐 Login: Dashboard navigation failed, staying on login...', navError);
+            console.warn('🔐 Login: Onboarding navigation failed, staying on login...', navError);
           }
         } else {
           // Online mode - check if user already agreed to policy
@@ -106,28 +106,33 @@ export class LoginComponent implements OnInit {
           const hasAgreedToPolicy = user.isAgreedToPolicy || false;
           console.log('🔐 Login: User policy agreement status:', hasAgreedToPolicy);
           
-          if (hasAgreedToPolicy && rememberMe) {
+          const returnUrl = this.getSafeReturnUrl();
+          if (hasAgreedToPolicy && (rememberMe || returnUrl)) {
             // User already agreed and remember me is checked - skip policy page
             console.log('🔐 Login: Policy already agreed with remember me - redirecting to onboarding...');
             try {
-              await this.router.navigate(['/onboarding']);
+              await this.router.navigateByUrl(returnUrl || '/onboarding');
               console.log('🔐 Login: Navigation to onboarding successful');
             } catch (navError) {
               console.error('🔐 Login: Onboarding navigation failed:', navError);
               // Fallback to policy agreement if onboarding fails
-              await this.router.navigate(['/policy-agreement']);
+              await this.router.navigate(['/policy-agreement'], {
+                queryParams: returnUrl ? { returnUrl } : {}
+              });
             }
           } else {
             // User needs to agree to policy - go to policy agreement
             try {
               console.log('🔐 Login: Redirecting to policy agreement...');
-              const navResult = await this.router.navigate(['/policy-agreement']);
+              const navResult = await this.router.navigate(['/policy-agreement'], {
+                queryParams: returnUrl ? { returnUrl } : {}
+              });
               console.log('🔐 Login: Navigation result:', navResult);
             } catch (navError) {
               console.error('🔐 Login: Policy agreement navigation failed:', navError);
               console.warn('🔐 Login: Falling back to onboarding...');
               // Fallback to onboarding if policy-agreement chunk fails
-              await this.router.navigate(['/onboarding']);
+              await this.router.navigateByUrl(returnUrl || '/onboarding');
             }
           }
         }
@@ -142,6 +147,15 @@ export class LoginComponent implements OnInit {
     } else {
       console.warn('🔐 Login: Form is invalid');
     }
+  }
+
+  get returnUrl(): string | null {
+    return this.getSafeReturnUrl();
+  }
+
+  private getSafeReturnUrl(): string | null {
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    return returnUrl?.startsWith('/') && !returnUrl.startsWith('//') ? returnUrl : null;
   }
 
   async resendVerificationEmail() {

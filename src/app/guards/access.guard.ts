@@ -11,8 +11,7 @@ export class AccessGuard implements CanActivate {
     if (!permissionKey || this.accessService.canView(permissionKey as any)) {
       return true;
     }
-    // Redirect to dashboard or error page if not allowed
-    this.router.navigate(['/dashboard']);
+    this.router.navigate(['/create-company']);
     return false;
   }
 }

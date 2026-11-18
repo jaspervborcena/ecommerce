@@ -1,8 +1,8 @@
-# Bentamu Ecommerce
+# Tovrika Ecommerce
 
-Bentamu Ecommerce is an online store platform for managing a growing network of branches, products, orders, customers, and sales partners. Each branch can operate its own catalog and fulfillment workflow while remaining part of the Bentamu business.
+Tovrika is a multi-branch commerce app with account setup, company onboarding, public branch and product browsing, cart, and checkout flows. Firebase project configuration and the storefront company slug are supplied by the Angular environment files.
 
-The platform will also support an influencer and reseller channel. Approved partners can promote Bentamu products using tracked links or codes, and receive commissions for completed sales. This provides a dropshipping-style selling model without requiring every influencer to hold inventory.
+The current UI keeps authentication and account recovery, home, onboarding, company setup, branch browsing, and storefront checkout. Other management and operations screens are intentionally removed while the app is being simplified.
 
 ## Goal
 
@@ -18,26 +18,16 @@ Build a commerce-first platform that allows Bentamu and its branches to:
 - use checkout and payment methods such as PayPal, credit/debit cards, GCash, and Maya
 - embed the checkout into WordPress or other websites
 
-## What this project is becoming
+## Product direction
 
-This application will function as:
-- a Shao Tang operations and admin dashboard
-- a multi-branch storefront and catalog experience
-- a hosted checkout system
-- an influencer and reseller sales portal
-- an order routing and fulfillment system
-- a commission tracking and payout system
-- a payment-enabled commerce backend for embedded integration
-
-It will no longer be centered around a POS cashier workflow.
+The product is focused on company and branch onboarding followed by public storefront shopping. Visitors can browse before signing in; an account is required to complete checkout, and an authenticated shopper has customer access.
 
 ## What we are reusing
 
 The current codebase already provides a strong foundation:
 - authentication and user access flow
 - company/store structure
-- product and inventory concepts
-- dashboard shell and admin pages
+- public storefront, cart, and checkout
 - payment-related concepts already present in the subscription flow
 
 ## What will be removed or replaced
@@ -95,8 +85,7 @@ Role-based users can also shop as customers. Their operational permissions must 
 - define role permissions and branch or organization scope
 - define Shao Tang organization and branch roles
 - remove or hide POS-first experience from the main flow
-- create store/shop routes
-- create product listing and product detail pages
+- keep store/shop and product listing/detail routes
 - create a basic admin commerce dashboard view
 
 ### Phase 2 - Cart and checkout
@@ -148,10 +137,10 @@ Role-based users can also shop as customers. Their operational permissions must 
 - [ ] Influencer, owner, admin, store manager, and coordinator permissions
 - [x] Company/store foundation reusable
 - [x] Product data model reusable
-- [x] Branding direction updated to Shao Tang Ecommerce
-- [x] Firebase project connected to the Shao Tang environment
-- [ ] Storefront pages
-- [ ] Cart and checkout
+- [x] Branding updated to Tovrika
+- [x] Firebase web app configured for `jasperpos-1dfd5`
+- [x] Storefront pages
+- [x] Cart and checkout
 - [ ] Payment integration
 - [ ] Multi-branch operations
 - [ ] Influencer and reseller tracking
@@ -162,8 +151,8 @@ Role-based users can also shop as customers. Their operational permissions must 
 
 ## Notes for implementation
 
-- reuse existing auth and dashboard structure wherever possible
-- keep the admin experience but shift it to commerce operations
+- keep only the current onboarding, auth, branch browsing, and storefront routes active
+- use `companySlug` in the Angular environment to resolve the public company projection
 - model branches as first-class operational units under Shao Tang
 - keep inventory, fulfillment, and permissions scoped to the correct branch
 - calculate commissions on the server after payment and order status updates

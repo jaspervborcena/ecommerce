@@ -91,7 +91,7 @@
         </button>
         
         <!-- Login Link -->
-        <a routerLink="/login" class="auth-link">
+        <a routerLink="/login" [queryParams]="returnUrl ? { returnUrl: returnUrl } : {}" class="auth-link">
           Already have an account? Sign in
         </a>
       </form>

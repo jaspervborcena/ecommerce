@@ -59,6 +59,31 @@ npm run backfill:sample-data -- --project-id <test-project-id> --apply
 
 Writes use the Admin SDK, so Firestore security rules do not restrict system-managed sample collections. The script refuses to apply writes to projects listed in `.firebaserc` unless `FIRESTORE_EMULATOR_HOST` is set or `--allow-configured-project` is explicitly passed. Re-running it updates the same reserved sample document IDs. It does not create Firebase Authentication users, and the placeholder UIDs cannot sign in.
 
+## Backfill the customer journey
+
+[`firestore-customer-journey.json`](./firestore-customer-journey.json) is a focused, linked scenario for an owner-created business and a separate shopper checkout:
+
+The JSON records the final state of these journey steps: the owner registers, creates a company, branches, and products; a visitor browses without producing a document; then a separate shopper registers and checks out as a customer.
+
+The fixture mirrors the storefront branch selector: branches are top-level `stores` documents, and their document IDs are used as `storeId`. Create the owner Firebase Authentication account in the app first. The shopper profile is sample-only and cannot sign in; pass a real shopper UID/email instead if you need a sign-in-capable customer. No passwords are stored.
+
+The fixture writes `storefront_companies`, `storefront_stores`, and `storefront_products` projections containing only public lookup and browsing fields; private company, store, and product documents are not readable anonymously. For this sample company, open `/branches?companyId=sample-company-001`; selecting a branch opens its product storefront. Deploy the updated Firestore rules and app before anonymous browsing will work in the live site.
+
+From the repository root, preview the journey fixture without writing:
+
+```powershell
+Set-Location functions
+npm.cmd run backfill:customer-journey -- --project-id <test-project-id> --owner-uid <owner-auth-uid> --owner-email <owner-email> --shopper-uid sample-shopper-journey-001 --shopper-email shopper@journey.example.test
+```
+
+Add `--apply` only when intentionally writing to an isolated test project. The existing configured-project safety check still applies:
+
+```powershell
+npm.cmd run backfill:customer-journey -- --project-id <test-project-id> --owner-uid <owner-auth-uid> --owner-email <owner-email> --shopper-uid sample-shopper-journey-001 --shopper-email shopper@journey.example.test --apply
+```
+
+The checkout route requires an account. Registration and sign-in preserve the checkout return path, and new accounts receive the `customer` role before an order is submitted. The fixture's order is linked to the shopper UID and has `roleId: "customer"` to represent that post-registration state.
+
 ## Related project documentation
 
 - [`README.md`](./README.md) describes the project's direction and implementation roadmap.

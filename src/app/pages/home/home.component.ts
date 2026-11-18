@@ -33,16 +33,12 @@ export class HomeComponent {
     this.isOnline() ? 'home-header' : 'home-header offline'
   );
 
-  navigateToDashboard() {
-    // Navigate based on user role
+  navigateToCompanySetup() {
     const currentUser = this.currentUser();
-    
-    // If user is a visitor, they don't have access to dashboard
     if (currentUser?.roleId === 'visitor') {
       return;
     }
-    
-    this.router.navigate(['/dashboard']);
+    this.router.navigate(['/create-company']);
   }
   
   protected toggleUserMenu() {

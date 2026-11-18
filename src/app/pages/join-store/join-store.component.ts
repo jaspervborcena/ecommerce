@@ -46,9 +46,7 @@ export class JoinStoreComponent {
     { id: 'store_manager', label: 'Store Manager' }
   ];
 
-  navigateToDashboard() {
-    const role = this.userRole();
-    const currentUser = this.currentUser();
+  navigateToOnboarding() {
     const currentPermission = this.authService.getCurrentPermission();
     
     // Check if user has valid permissions (not visitor)
@@ -61,7 +59,7 @@ export class JoinStoreComponent {
       return;
     }
     
-    this.router.navigate(['/dashboard']);
+    this.router.navigate(['/onboarding']);
   }
 
   // Handle cancel button click - visitors go to onboarding, others go home

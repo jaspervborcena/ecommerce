@@ -1,4 +1,4 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, signal, inject } from '@angular/core';
 import { 
   Firestore, 
   collection, 
@@ -12,6 +12,7 @@ import {
   addDoc,
   collectionGroup,
   documentId,
+  getDoc,
   limit
 } from '@angular/fire/firestore';
 import { runTransaction, getFirestore } from 'firebase/firestore';
@@ -22,6 +23,7 @@ import { OfflineDocumentService } from '../core/services/offline-document.servic
 import { IndexedDBService } from '../core/services/indexeddb.service';
 import { Store } from '../interfaces/store.interface';
 import { FEATURE_FLAGS } from '../shared/config/feature-flags';
+import { StorefrontPublicationService } from './storefront-publication.service';
 
 export type { Store } from '../interfaces/store.interface';
 
@@ -29,6 +31,7 @@ export type { Store } from '../interfaces/store.interface';
   providedIn: 'root'
 })
 export class StoreService {
+  private readonly storefrontPublication = inject(StorefrontPublicationService);
   private readonly storesSignal = signal<Store[]>([]);
   private isLoading = false;
   private loadTimestamp = 0;
@@ -359,6 +362,7 @@ export class StoreService {
         id: documentId,
         ...newStore
       };
+      await this.storefrontPublication.syncStore(documentId, createdStore);
       
       console.log('✅ Store created with ID:', documentId, 'status:', createdStore.status);
       
@@ -440,6 +444,12 @@ export class StoreService {
   async updateStore(storeId: string, updates: Partial<Store>) {
     try {
       const storeRef = doc(this.firestore, 'stores', storeId);
+      const currentStore = this.stores().find(store => store.id === storeId);
+      const currentSnapshot = currentStore ? null : await getDoc(storeRef);
+      if (!currentStore && !currentSnapshot?.exists()) {
+        throw new Error(`Store ${storeId} was not found.`);
+      }
+      const storeBeforeUpdate = currentStore || currentSnapshot!.data() as Store;
       
       const rawUpdate = {
         ...updates,
@@ -466,6 +476,11 @@ export class StoreService {
         }
       }
 
+      await this.storefrontPublication.syncStore(storeId, {
+        ...storeBeforeUpdate,
+        ...updateData
+      });
+
       // Update the signal
       this.storesSignal.update(stores =>
         stores.map(store =>
@@ -483,7 +498,8 @@ export class StoreService {
 
   async deleteStore(storeId: string) {
     try {
-  await this.offlineDocService.deleteDocument('stores', storeId);
+      await this.storefrontPublication.removeStore(storeId);
+      await this.offlineDocService.deleteDocument('stores', storeId);
 
       // Update the signal
       this.storesSignal.update(stores =>

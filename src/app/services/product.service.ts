@@ -11,6 +11,7 @@ import {
   query, 
   where, 
   getDocs,
+  getDoc,
   onSnapshot,
   orderBy,
   limit,
@@ -33,6 +34,10 @@ import { OfflineDocumentService } from '../core/services/offline-document.servic
 import { IndexedDBService, OfflineProduct } from '../core/services/indexeddb.service';
 import { environment } from '../../environments/environment';
 import { BehaviorSubject, Observable } from 'rxjs';
+import {
+  StorefrontPublicationService,
+  toPublicStorefrontProduct
+} from './storefront-publication.service';
 
 interface ProductCacheState {
   products: Product[];
@@ -48,6 +53,7 @@ interface ProductCacheState {
 })
 export class ProductService implements OnDestroy {
   private readonly offlineDocService = inject(OfflineDocumentService);
+  private readonly storefrontPublication = inject(StorefrontPublicationService);
   private logger = inject(LoggerService);
   
   // Signal-based reactive cache
@@ -1146,6 +1152,10 @@ async loadProductsByCompanyAndStore(companyId?: string, storeId?: string): Promi
         fullPayload: productPayload
       });
       batch.set(productRef, productPayload);
+      const publicProduct = toPublicStorefrontProduct(productPayload as Product);
+      if (publicProduct) {
+        batch.set(doc(this.firestore, 'storefront_products', productId), publicProduct);
+      }
       console.log('📝 Product creation queued in batch');
 
       // 5. Queue inventory batch creation in batch
@@ -1273,10 +1283,26 @@ async loadProductsByCompanyAndStore(companyId?: string, storeId?: string): Promi
       // Clean undefined values to prevent Firestore errors
       const cleanedUpdateData = this.cleanUndefinedValues(updateData);
       
-      // Use Firestore updateDoc directly for automatic offline persistence
-      // Firestore will queue this update if offline and update its cache automatically
       const productRef = doc(this.firestore, 'products', productId);
-      await updateDoc(productRef, cleanedUpdateData);
+      const productSnapshot = await getDoc(productRef);
+      if (!productSnapshot.exists()) {
+        throw new Error(`Product ${productId} was not found.`);
+      }
+      const updatedProduct = {
+        id: productId,
+        ...productSnapshot.data(),
+        ...cleanedUpdateData
+      } as Product;
+      const batch = writeBatch(this.firestore);
+      batch.update(productRef, cleanedUpdateData);
+      const publicProduct = toPublicStorefrontProduct(updatedProduct);
+      const publicProductRef = doc(this.firestore, 'storefront_products', productId);
+      if (publicProduct) {
+        batch.set(publicProductRef, publicProduct);
+      } else {
+        batch.delete(publicProductRef);
+      }
+      await batch.commit();
       
       // Update the local cache optimistically with the cleaned/normalized data
       this.updateProductInCache(productId, cleanedUpdateData as Partial<Product>);
@@ -1289,6 +1315,7 @@ async loadProductsByCompanyAndStore(companyId?: string, storeId?: string): Promi
 
   async deleteProduct(productId: string): Promise<void> {
     try {
+      await this.storefrontPublication.removeProduct(productId);
       await this.offlineDocService.deleteDocument('products', productId);
 
       // Update the local cache optimistically

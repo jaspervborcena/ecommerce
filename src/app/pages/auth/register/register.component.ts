@@ -1,13 +1,12 @@
 import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 import { HeaderComponent } from '../../../shared/components/header/header.component';
 import { LogoComponent } from '../../../shared/components/logo/logo.component';
 import { AppConstants } from '../../../shared/enums';
 import { NetworkService } from '../../../core/services/network.service';
-import { UserRolesEnum } from '../../../shared/enums/user-roles.enum';
 
 @Component({
   selector: 'app-register',
@@ -20,6 +19,7 @@ export class RegisterComponent {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private networkService = inject(NetworkService);
 
   // App constants and network status
@@ -47,11 +47,15 @@ export class RegisterComponent {
           email: email!,
           displayName: displayName!,
           status: 'active'
-          // permissions will be initialized in the service (default visitor)
+          // AuthService initializes new registrations with the customer role.
         });
         
-        // TEMP: Email verification flow disabled — keep user logged in and proceed to onboarding
-        await this.router.navigate(['/onboarding']);
+        const returnUrl = this.getSafeReturnUrl();
+        if (returnUrl) {
+          await this.router.navigate(['/policy-agreement'], { queryParams: { returnUrl } });
+        } else {
+          await this.router.navigate(['/onboarding']);
+        }
       } catch (err: any) {
         // Handle Firebase auth errors more gracefully
         if (err.code === 'auth/email-already-in-use') {
@@ -63,5 +67,14 @@ export class RegisterComponent {
         this.isLoading = false;
       }
     }
+  }
+
+  get returnUrl(): string | null {
+    return this.getSafeReturnUrl();
+  }
+
+  private getSafeReturnUrl(): string | null {
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    return returnUrl?.startsWith('/') && !returnUrl.startsWith('//') ? returnUrl : null;
   }
 }

@@ -1,0 +1,306 @@
+{
+  "_meta": {
+    "name": "customer-registration-and-storefront-checkout",
+    "description": "One owner sets up a company, two branches, and products; a separate shopper registers as a customer and checks out.",
+    "journey": [
+      "Owner registers an account in Firebase Authentication.",
+      "Owner creates a company.",
+      "Owner creates branches; storefront branches are stored as top-level stores documents.",
+      "Owner creates active products for the main branch.",
+      "A visitor browses the main branch and adds products to a cart; browsing itself creates no Firestore document.",
+      "Visitor registers a separate account; the new account receives the customer permission.",
+      "The registered customer completes checkout and the order links to that customer's UID."
+    ],
+    "notes": [
+      "Create the owner Firebase Authentication account in the app first. Firestore fixtures cannot create Auth accounts or passwords.",
+      "Replace the owner UID and email placeholders with the values from the account created in the app.",
+      "For this storefront flow, each branch is a top-level stores document; the branch selector uses the store document ID as storeId.",
+      "The shopper in this fixture is a sample-only profile and cannot sign in; use a real shopper UID/email if you want a sign-in-capable customer.",
+      "Public storefront documents contain only browse-safe fields; internal store and product documents remain private.",
+      "To browse this sample company, open /branches?companyId=sample-company-001.",
+      "The current storefront checkout UI still writes guest orders; this fixture does not change that UI behavior."
+    ]
+  },
+  "documents": [
+    {
+      "path": "users/{{OWNER_UID}}",
+      "data": {
+        "uid": "{{OWNER_UID}}",
+        "email": "{{OWNER_EMAIL}}",
+        "displayName": "Morgan Rivera",
+        "status": "active",
+        "permissions": [
+          {
+            "companyId": "sample-company-001",
+            "storeId": "journey-store-main",
+            "roleId": "creator"
+          }
+        ],
+        "currentCompanyId": "sample-company-001",
+        "createdAt": "2026-03-01T09:00:00.000Z",
+        "updatedAt": "2026-03-01T09:10:00.000Z"
+      }
+    },
+    {
+      "path": "companies/sample-company-001",
+      "data": {
+        "uid": "{{OWNER_UID}}",
+        "ownerUid": "{{OWNER_UID}}",
+        "name": "Harbor Coffee",
+        "slug": "harbor-coffee",
+        "address": "10 Test Street, Manila",
+        "email": "{{OWNER_EMAIL}}",
+        "phone": "+630000000000",
+        "website": "https://harbor-coffee.example.test",
+        "plan": "basic",
+        "createdAt": "2026-03-01T09:05:00.000Z",
+        "updatedAt": "2026-03-01T09:05:00.000Z"
+      }
+    },
+    {
+      "path": "userRoles/journey-owner-company-role",
+      "data": {
+        "uid": "{{OWNER_UID}}",
+        "userId": "{{OWNER_UID}}",
+        "companyId": "sample-company-001",
+        "storeId": "",
+        "roleId": "creator",
+        "createdAt": "2026-03-01T09:05:00.000Z",
+        "updatedAt": "2026-03-01T09:05:00.000Z"
+      }
+    },
+    {
+      "path": "stores/journey-store-main",
+      "data": {
+        "uid": "{{OWNER_UID}}",
+        "companyId": "sample-company-001",
+        "storeName": "Harbor Coffee",
+        "storeType": "retail",
+        "branchName": "Main Branch",
+        "address": "10 Test Street, Manila",
+        "phoneNumber": "+630000000001",
+        "email": "{{OWNER_EMAIL}}",
+        "status": "active",
+        "isBirAccredited": false,
+        "birAccreditationStatus": "not_submitted",
+        "tinNumber": "",
+        "birDetails": {
+          "birPermitNo": "",
+          "atpOrOcn": "",
+          "inclusiveSerialNumber": "",
+          "serialNumber": "",
+          "minNumber": "",
+          "invoiceType": "",
+          "invoiceNumber": "",
+          "permitDateIssued": "2026-03-01T09:00:00.000Z",
+          "validityNotice": ""
+        },
+        "subscriptionPopupShown": false,
+        "createdAt": "2026-03-01T09:10:00.000Z",
+        "updatedAt": "2026-03-01T09:10:00.000Z"
+      }
+    },
+    {
+      "path": "storefront_stores/journey-store-main",
+      "data": {
+        "companyId": "sample-company-001",
+        "storeName": "Harbor Coffee",
+        "branchName": "Main Branch",
+        "address": "10 Test Street, Manila",
+        "status": "active"
+      }
+    },
+    {
+      "path": "stores/journey-store-north",
+      "data": {
+        "uid": "{{OWNER_UID}}",
+        "companyId": "sample-company-001",
+        "storeName": "Harbor Coffee",
+        "storeType": "retail",
+        "branchName": "North Branch",
+        "address": "25 Test Avenue, Quezon City",
+        "phoneNumber": "+630000000002",
+        "email": "{{OWNER_EMAIL}}",
+        "status": "active",
+        "isBirAccredited": false,
+        "birAccreditationStatus": "not_submitted",
+        "tinNumber": "",
+        "birDetails": {
+          "birPermitNo": "",
+          "atpOrOcn": "",
+          "inclusiveSerialNumber": "",
+          "serialNumber": "",
+          "minNumber": "",
+          "invoiceType": "",
+          "invoiceNumber": "",
+          "permitDateIssued": "2026-03-01T09:00:00.000Z",
+          "validityNotice": ""
+        },
+        "subscriptionPopupShown": false,
+        "createdAt": "2026-03-01T09:15:00.000Z",
+        "updatedAt": "2026-03-01T09:15:00.000Z"
+      }
+    },
+    {
+      "path": "storefront_stores/journey-store-north",
+      "data": {
+        "companyId": "sample-company-001",
+        "storeName": "Harbor Coffee",
+        "branchName": "North Branch",
+        "address": "25 Test Avenue, Quezon City",
+        "status": "active"
+      }
+    },
+    {
+      "path": "userRoles/journey-owner-main-store-role",
+      "data": {
+        "uid": "{{OWNER_UID}}",
+        "userId": "{{OWNER_UID}}",
+        "companyId": "sample-company-001",
+        "storeId": "journey-store-main",
+        "roleId": "creator",
+        "createdAt": "2026-03-01T09:10:00.000Z",
+        "updatedAt": "2026-03-01T09:10:00.000Z"
+      }
+    },
+    {
+      "path": "products/journey-product-coffee",
+      "data": {
+        "uid": "{{OWNER_UID}}",
+        "createdBy": "{{OWNER_UID}}",
+        "updatedBy": "{{OWNER_UID}}",
+        "productName": "House Blend Coffee",
+        "description": "Freshly roasted house blend.",
+        "skuId": "HBC-001",
+        "productCode": "HBC001",
+        "unitType": "packs",
+        "category": "Beverages",
+        "totalStock": 0,
+        "costPrice": 220,
+        "originalPrice": 320,
+        "sellingPrice": 320,
+        "companyId": "sample-company-001",
+        "storeId": "journey-store-main",
+        "isVatApplicable": false,
+        "hasDiscount": false,
+        "discountType": "percentage",
+        "discountValue": 0,
+        "isStockTracked": false,
+        "status": "active",
+        "createdAt": "2026-03-01T09:30:00.000Z",
+        "updatedAt": "2026-03-01T09:30:00.000Z",
+        "lastUpdated": "2026-03-01T09:30:00.000Z"
+      }
+    },
+    {
+      "path": "storefront_products/journey-product-coffee",
+      "data": {
+        "storeId": "journey-store-main",
+        "productName": "House Blend Coffee",
+        "sellingPrice": 320,
+        "status": "active",
+        "description": "Freshly roasted house blend.",
+        "skuId": "HBC-001",
+        "category": "Beverages",
+        "unitType": "packs",
+        "currency": "PHP"
+      }
+    },
+    {
+      "path": "products/journey-product-water",
+      "data": {
+        "uid": "{{OWNER_UID}}",
+        "createdBy": "{{OWNER_UID}}",
+        "updatedBy": "{{OWNER_UID}}",
+        "productName": "Bottled Water",
+        "description": "500 ml bottled water.",
+        "skuId": "BW-002",
+        "productCode": "BW002",
+        "unitType": "bottles",
+        "category": "Beverages",
+        "totalStock": 0,
+        "costPrice": 8,
+        "originalPrice": 18,
+        "sellingPrice": 18,
+        "companyId": "sample-company-001",
+        "storeId": "journey-store-main",
+        "isVatApplicable": false,
+        "hasDiscount": false,
+        "discountType": "percentage",
+        "discountValue": 0,
+        "isStockTracked": false,
+        "status": "active",
+        "createdAt": "2026-03-01T09:35:00.000Z",
+        "updatedAt": "2026-03-01T09:35:00.000Z",
+        "lastUpdated": "2026-03-01T09:35:00.000Z"
+      }
+    },
+    {
+      "path": "storefront_products/journey-product-water",
+      "data": {
+        "storeId": "journey-store-main",
+        "productName": "Bottled Water",
+        "sellingPrice": 18,
+        "status": "active",
+        "description": "500 ml bottled water.",
+        "skuId": "BW-002",
+        "category": "Beverages",
+        "unitType": "bottles",
+        "currency": "PHP"
+      }
+    },
+    {
+      "path": "users/{{SHOPPER_UID}}",
+      "data": {
+        "uid": "{{SHOPPER_UID}}",
+        "email": "{{SHOPPER_EMAIL}}",
+        "displayName": "Jamie Santos",
+        "status": "active",
+        "permissions": [
+          {
+            "companyId": "",
+            "storeId": "",
+            "roleId": "customer"
+          }
+        ],
+        "createdAt": "2026-03-02T10:00:00.000Z",
+        "updatedAt": "2026-03-02T10:00:00.000Z"
+      }
+    },
+    {
+      "path": "storefront_orders/journey-order-001",
+      "data": {
+        "uid": "{{SHOPPER_UID}}",
+        "customerUid": "{{SHOPPER_UID}}",
+        "customerName": "Jamie Santos",
+        "email": "{{SHOPPER_EMAIL}}",
+        "notes": "Sample customer journey checkout.",
+        "items": [
+          {
+            "productId": "journey-product-coffee",
+            "name": "House Blend Coffee",
+            "price": 320,
+            "quantity": 1,
+            "subtotal": 320,
+            "currency": "PHP"
+          },
+          {
+            "productId": "journey-product-water",
+            "name": "Bottled Water",
+            "price": 18,
+            "quantity": 2,
+            "subtotal": 36,
+            "currency": "PHP"
+          }
+        ],
+        "subtotal": 356,
+        "total": 356,
+        "currency": "PHP",
+        "storeId": "journey-store-main",
+        "roleId": "customer",
+        "status": "pending",
+        "createdAt": "2026-03-02T10:15:00.000Z"
+      }
+    }
+  ]
+}

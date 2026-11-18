@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Firestore, addDoc, collection } from '@angular/fire/firestore';
+import { AuthService } from '../../services/auth.service';
 import { StorefrontCartService } from '../../services/storefront-cart.service';
 
 @Component({
@@ -20,7 +21,7 @@ import { StorefrontCartService } from '../../services/storefront-cart.service';
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/40">
         <h2 class="text-2xl font-semibold text-slate-900">Checkout</h2>
-        <p class="mt-2 text-sm text-slate-500">Complete a simple order to verify the storefront flow.</p>
+        <p class="mt-2 text-sm text-slate-500">Sign in or create an account to complete your order.</p>
 
         <form [formGroup]="form" (ngSubmit)="submit()" class="mt-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <div class="space-y-4">
@@ -63,6 +64,7 @@ export class StorefrontCheckoutComponent {
   private readonly cartService = inject(StorefrontCartService);
   private readonly firestore = inject(Firestore);
   private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
 
   readonly items = this.cartService.items;
   readonly subtotal = this.cartService.subtotal;
@@ -73,12 +75,19 @@ export class StorefrontCheckoutComponent {
   readonly isSuccess = signal(false);
 
   readonly form = this.fb.group({
-    customerName: ['', Validators.required],
-    email: ['', [Validators.required, Validators.email]],
+    customerName: [this.authService.currentUser()?.displayName || '', Validators.required],
+    email: [this.authService.currentUser()?.email || '', [Validators.required, Validators.email]],
     notes: ['']
   });
 
   async submit(): Promise<void> {
+    const user = this.authService.currentUser();
+    if (!user) {
+      this.message.set('Create an account or sign in before completing checkout.');
+      this.isSuccess.set(false);
+      return;
+    }
+
     if (this.form.invalid || this.items().length === 0) {
       this.message.set('Please complete the form and add at least one item.');
       this.isSuccess.set(false);
@@ -91,6 +100,7 @@ export class StorefrontCheckoutComponent {
     try {
       const snapshot = this.cartService.getCartSnapshot();
       const order = {
+        uid: user.uid,
         createdAt: new Date(),
         customerName: this.form.value.customerName,
         email: this.form.value.email,
@@ -100,7 +110,7 @@ export class StorefrontCheckoutComponent {
         total: snapshot.total,
         currency: snapshot.currency,
         storeId: snapshot.storeId,
-        roleId: 'guest',
+        roleId: 'customer',
         status: 'pending'
       };
 
@@ -111,35 +121,11 @@ export class StorefrontCheckoutComponent {
       this.form.reset();
       window.setTimeout(() => this.router.navigate(['/store/' + snapshot.storeId]), 700);
     } catch (err) {
-      console.warn('Firestore order submission failed, using local fallback', err);
-      this.persistFallbackOrder();
-      this.cartService.clear();
-      this.message.set('Order saved locally. Your order is ready for review.');
-      this.isSuccess.set(true);
-      this.form.reset();
-      window.setTimeout(() => this.router.navigate(['/store/' + this.cartService.getCartSnapshot().storeId]), 700);
+      console.error('Firestore order submission failed.', err);
+      this.message.set('Could not place the order. Your cart is unchanged; please try again.');
+      this.isSuccess.set(false);
     } finally {
       this.isSubmitting.set(false);
     }
-  }
-
-  private persistFallbackOrder(): void {
-    const snapshot = this.cartService.getCartSnapshot();
-    const existing = JSON.parse(localStorage.getItem('tovrika-storefront-orders') || '[]');
-    existing.unshift({
-      id: `local-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      customerName: this.form.value.customerName,
-      email: this.form.value.email,
-      notes: this.form.value.notes || '',
-      items: snapshot.items,
-      subtotal: snapshot.subtotal,
-      total: snapshot.total,
-      currency: snapshot.currency,
-      storeId: snapshot.storeId,
-      roleId: 'guest',
-      status: 'pending'
-    });
-    localStorage.setItem('tovrika-storefront-orders', JSON.stringify(existing.slice(0, 20)));
   }
 }

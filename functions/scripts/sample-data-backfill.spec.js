@@ -6,13 +6,21 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   SAMPLE_COLLECTIONS,
+  buildJourneyDocuments,
   buildSampleDocuments,
   insertSampleDocuments
 } from './sample-data-backfill.js';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const fixture = JSON.parse(readFileSync(path.join(repositoryRoot, 'postman-sample-data.json'), 'utf8'));
+const journeyFixture = JSON.parse(readFileSync(path.join(repositoryRoot, 'firestore-customer-journey.json'), 'utf8'));
 const backfillScript = path.join(repositoryRoot, 'functions', 'scripts', 'sample-data-backfill.js');
+const journeyAccounts = {
+  ownerUid: 'auth-owner-test-001',
+  ownerEmail: 'owner@test.example',
+  shopperUid: 'auth-shopper-test-001',
+  shopperEmail: 'shopper@test.example'
+};
 
 class MemoryFirestore {
   documents = new Map();
@@ -108,6 +116,65 @@ test('inserts the same stable sample records on repeated backfills', async () =>
   assert.equal(firestore.documents.size, documents.length);
   assert.equal(firestore.commits, 2);
   assert.equal(firestore.documents.get('products/sample-product-001').productName, 'Arabica Coffee');
+});
+
+test('builds a linked account-to-storefront journey with registered customer checkout', () => {
+  const documents = buildJourneyDocuments(journeyFixture, journeyAccounts);
+  assert.equal(documents.length, 14);
+  const byPath = new Map(documents.map(({ path, data }) => [path, data]));
+  const owner = byPath.get(`users/${journeyAccounts.ownerUid}`);
+  const shopper = byPath.get(`users/${journeyAccounts.shopperUid}`);
+  const company = byPath.get('companies/sample-company-001');
+  const mainStore = byPath.get('stores/journey-store-main');
+  const northStore = byPath.get('stores/journey-store-north');
+  const publicMainStore = byPath.get('storefront_stores/journey-store-main');
+  const coffee = byPath.get('products/journey-product-coffee');
+  const publicCoffee = byPath.get('storefront_products/journey-product-coffee');
+  const water = byPath.get('products/journey-product-water');
+  const publicWater = byPath.get('storefront_products/journey-product-water');
+  const order = byPath.get('storefront_orders/journey-order-001');
+
+  assert.equal(owner.email, journeyAccounts.ownerEmail);
+  assert.equal(company.ownerUid, journeyAccounts.ownerUid);
+  assert.equal(mainStore.companyId, 'sample-company-001');
+  assert.equal(northStore.companyId, 'sample-company-001');
+  assert.equal(publicMainStore.companyId, 'sample-company-001');
+  assert.equal(coffee.uid, journeyAccounts.ownerUid);
+  assert.equal(coffee.storeId, 'journey-store-main');
+  assert.equal(publicCoffee.storeId, coffee.storeId);
+  assert.equal(water.companyId, 'sample-company-001');
+  assert.equal(publicWater.storeId, water.storeId);
+  assert.equal(Object.hasOwn(publicCoffee, 'costPrice'), false);
+  assert.equal(Object.hasOwn(publicCoffee, 'uid'), false);
+  assert.equal(Object.hasOwn(publicCoffee, 'totalStock'), false);
+  assert.equal(shopper.email, journeyAccounts.shopperEmail);
+  assert.equal(shopper.permissions[0].roleId, 'customer');
+  assert.equal(order.uid, journeyAccounts.shopperUid);
+  assert.equal(order.roleId, 'customer');
+  assert.equal(order.items[0].productId, 'journey-product-coffee');
+  assert.equal(order.items[1].productId, 'journey-product-water');
+  assert.equal(order.total, order.items.reduce((sum, item) => sum + item.subtotal, 0));
+  assert.ok(order.createdAt instanceof Date);
+  assert.ok(documents.every(({ path }) => !path.includes('{{')));
+});
+
+test('rejects invalid journey account IDs and duplicate document paths', () => {
+  assert.throws(
+    () => buildJourneyDocuments(journeyFixture, { ...journeyAccounts, shopperUid: journeyAccounts.ownerUid }),
+    /different Firebase Auth UIDs/
+  );
+  assert.throws(
+    () => buildJourneyDocuments(journeyFixture, { ...journeyAccounts, ownerUid: 'bad/uid' }),
+    /must not contain "\/"/
+  );
+  assert.throws(
+    () => buildJourneyDocuments({ documents: [{ path: 'users/test', data: {} }, { path: 'users/test', data: {} }] }, journeyAccounts),
+    /Duplicate Firestore document path/
+  );
+  assert.throws(
+    () => buildJourneyDocuments({ documents: [{ path: 'users/{{UNKNOWN_UID}}', data: {} }] }, journeyAccounts),
+    /Unresolved placeholder/
+  );
 });
 
 test('refuses to write to a configured dev or prod project', () => {

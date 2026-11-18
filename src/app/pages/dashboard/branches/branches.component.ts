@@ -1,13 +1,11 @@
 import { Component, OnInit, inject, signal, Injector } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Firestore, collection, getDocs, query, where } from '@angular/fire/firestore';
-import { AuthService } from '../../../services/auth.service';
-import { Branch } from '../../../interfaces/branch.interface';
-import { Store } from '../../../interfaces/store.interface';
 import { environment } from '../../../../environments/environment';
 import { runInInjectionContext } from '@angular/core';
 import { StoreSelectionService } from '../../../services/store-selection.service';
+import { StorefrontPublicationService } from '../../../services/storefront-publication.service';
 
 @Component({
   selector: 'app-branches',
@@ -75,14 +73,13 @@ import { StoreSelectionService } from '../../../services/store-selection.service
   styleUrls: ['./branches.component.css']
 })
 export class BranchesComponent implements OnInit {
-  private authService = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private firestore = inject(Firestore);
   private injector = inject(Injector);
   private storeSelectionService = inject(StoreSelectionService);
+  private storefrontPublication = inject(StorefrontPublicationService);
 
-  protected branches = signal<Branch[]>([]);
-  protected stores = signal<Store[]>([]);
   protected availableLocations = signal<Array<{
     id: string;
     name: string;
@@ -114,11 +111,9 @@ export class BranchesComponent implements OnInit {
     // Set the selected store in the service
     this.storeSelectionService.setSelectedStore(location.storeId);
     
-    // Navigate to product listing with the store ID
+    // Open the public product storefront for the selected branch.
     setTimeout(() => {
-      this.router.navigate(['/product-listing'], {
-        queryParams: { storeId: location.storeId }
-      });
+      this.router.navigate(['/store', location.storeId]);
     }, 300);
   }
 
@@ -126,7 +121,11 @@ export class BranchesComponent implements OnInit {
     this.isLoading.set(true);
 
     try {
-      const companyId = environment.defaultCompanyId || this.authService.getCurrentPermission()?.companyId || '';
+      const companyIdOverride = this.route.snapshot.queryParamMap.get('companyId');
+      const company = companyIdOverride
+        ? { companyId: companyIdOverride }
+        : await this.storefrontPublication.getCompanyBySlug(environment.companySlug);
+      const companyId = company?.companyId || '';
       console.log('🌿 BranchesComponent: Loading branches for companyId:', companyId);
 
       if (!companyId) {
@@ -136,45 +135,14 @@ export class BranchesComponent implements OnInit {
         return;
       }
 
-      // Try to load from top-level stores first
-      let storeDocs: any[] = [];
-      
-      try {
-        const storesRef = collection(this.firestore, 'stores');
-        const storesQuery = query(storesRef, where('companyId', '==', companyId));
-        const snapshot = await getDocs(storesQuery);
-        
-        console.log('🌿 BranchesComponent: Top-level stores query result:', {
-          companyId,
-          size: snapshot.size,
-          docs: snapshot.docs.map(d => ({ id: d.id, data: d.data() }))
-        });
-
-        if (!snapshot.empty) {
-          storeDocs = snapshot.docs;
-        }
-      } catch (error) {
-        console.warn('🌿 BranchesComponent: Top-level stores query failed:', error);
-      }
-
-      // If no stores found at top level, try company-nested collection
-      if (!storeDocs.length) {
-        try {
-          const companyStoresRef = collection(this.firestore, `companies/${companyId}/stores`);
-          const snapshot = await getDocs(companyStoresRef);
-          
-          console.log('🌿 BranchesComponent: Company-nested stores query result:', {
-            companyId,
-            collectionPath: `companies/${companyId}/stores`,
-            size: snapshot.size,
-            docs: snapshot.docs.map(d => ({ id: d.id, data: d.data() }))
-          });
-
-          storeDocs = snapshot.docs;
-        } catch (fallbackError) {
-          console.warn('🌿 BranchesComponent: Company-nested stores query failed:', fallbackError);
-        }
-      }
+      const storesRef = collection(this.firestore, 'storefront_stores');
+      const storesQuery = query(
+        storesRef,
+        where('companyId', '==', companyId),
+        where('status', '==', 'active')
+      );
+      const snapshot = await getDocs(storesQuery);
+      const storeDocs = snapshot.docs;
 
       // Normalize the store data
       const normalized = storeDocs.map(docSnap => {

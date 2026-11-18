@@ -1,7 +1,7 @@
 export interface AppEnvironment {
   production: boolean;
   version: string;
-  defaultCompanyId: string;
+  companySlug: string;
   firebase: {
     apiKey: string;
     authDomain: string;

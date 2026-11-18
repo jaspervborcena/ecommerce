@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(scriptDirectory, '../..');
-const fixturePath = path.join(repositoryRoot, 'postman-sample-data.json');
+const defaultFixturePath = path.join(repositoryRoot, 'postman-sample-data.json');
 
 export const SAMPLE_COLLECTIONS = [
   'accessRequests',
@@ -42,6 +42,9 @@ export const SAMPLE_COLLECTIONS = [
   'subscriptions',
   'systemConfig',
   'test',
+  'storefront_companies',
+  'storefront_products',
+  'storefront_stores',
   'userRoles',
   'users'
 ];
@@ -166,6 +169,36 @@ function createSupplementalCollections() {
       items: [{ productId: productId(index), quantity: 1 }]
     });
 
+    collections.storefront_stores = collections.storefront_stores || [];
+    collections.storefront_stores.push({
+      companyId: companyId(index),
+      storeName: ['Sample Main Store', 'Sample North Store', 'Sample South Store'][index],
+      branchName: ['Main Branch', 'North Branch', 'South Branch'][index],
+      address: `${index + 1} Sample Street, Manila`,
+      status: 'active'
+    });
+
+    collections.storefront_products = collections.storefront_products || [];
+    collections.storefront_products.push({
+      storeId: storeId(index),
+      productName: ['Arabica Coffee', 'Bottled Water', 'Gift Wrapping'][index],
+      sellingPrice: [320, 18, 50][index],
+      status: 'active',
+      description: ['Medium roast beans', '500 ml purified water', 'Gift wrapping service'][index],
+      skuId: ['COF-001', 'DRK-002', 'SVC-003'][index],
+      category: ['Beverages', 'Beverages', 'Services'][index],
+      unitType: ['packs', 'bottles', 'units'][index],
+      currency: 'PHP'
+    });
+
+    collections.storefront_companies = collections.storefront_companies || [];
+    collections.storefront_companies.push({
+      companyId: companyId(index),
+      slug: companyId(index),
+      name: `Sample Company ${number}`,
+      status: 'active'
+    });
+
     collections.subscriptionRequests = collections.subscriptionRequests || [];
     collections.subscriptionRequests.push({
       ...shared,
@@ -198,6 +231,9 @@ function documentId(collectionName, record, index) {
     case 'roleDefinition':
     case 'roledefinition': return record.roleId || sampleId('role', index);
     case 'stores': return storeId(index);
+    case 'storefront_companies': return record.slug || companyId(index);
+    case 'storefront_products': return productId(index);
+    case 'storefront_stores': return storeId(index);
     case 'users': return userId(index);
     case 'userRoles': return sampleId('user-role', index);
     default: return sampleId(collectionName.replace(/[^a-zA-Z0-9]+/g, '-'), index);
@@ -211,6 +247,20 @@ function linkRecord(collectionName, record, index) {
   const store = storeId(index);
   const branch = branchId(index);
   const product = productId(index);
+
+  if (collectionName === 'storefront_companies') {
+    linked.companyId = company;
+    linked.slug = company;
+    return linked;
+  }
+  if (collectionName === 'storefront_products') {
+    linked.storeId = store;
+    return linked;
+  }
+  if (collectionName === 'storefront_stores') {
+    linked.companyId = company;
+    return linked;
+  }
 
   if (collectionName === 'companies') {
     linked.uid = user;
@@ -339,6 +389,72 @@ export function buildSampleDocuments(fixture) {
   return documents;
 }
 
+function replacePlaceholders(value, replacements) {
+  if (Array.isArray(value)) {
+    return value.map((item) => replacePlaceholders(item, replacements));
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, child]) => [key, replacePlaceholders(child, replacements)])
+    );
+  }
+  if (typeof value !== 'string') return value;
+  return Object.entries(replacements).reduce(
+    (result, [placeholder, replacement]) => result.replaceAll(`{{${placeholder}}}`, () => replacement),
+    value
+  );
+}
+
+export function buildJourneyDocuments(fixture, accountValues) {
+  const requiredValues = ['ownerUid', 'ownerEmail', 'shopperUid', 'shopperEmail'];
+  for (const key of requiredValues) {
+    if (typeof accountValues[key] !== 'string' || !accountValues[key].trim()) {
+      throw new Error(`Provide a non-empty value for ${key}.`);
+    }
+  }
+  if (accountValues.ownerUid.includes('/') || accountValues.shopperUid.includes('/')) {
+    throw new Error('Firebase Auth UIDs must not contain "/".');
+  }
+  if (accountValues.ownerUid === accountValues.shopperUid) {
+    throw new Error('The owner and shopper must use different Firebase Auth UIDs.');
+  }
+  if (!Array.isArray(fixture.documents) || fixture.documents.length === 0) {
+    throw new Error('Journey fixture must contain a non-empty documents array.');
+  }
+
+  const replacements = {
+    OWNER_UID: accountValues.ownerUid,
+    OWNER_EMAIL: accountValues.ownerEmail,
+    SHOPPER_UID: accountValues.shopperUid,
+    SHOPPER_EMAIL: accountValues.shopperEmail
+  };
+  const seenPaths = new Set();
+  return fixture.documents.map((entry) => {
+    const resolved = replacePlaceholders(entry, replacements);
+    if (JSON.stringify(resolved).match(/\{\{[^{}]+\}\}/)) {
+      throw new Error(`Unresolved placeholder in journey document "${resolved.path || ''}".`);
+    }
+    if (typeof resolved.path !== 'string') {
+      throw new Error('Each journey fixture entry must have a Firestore document path.');
+    }
+    const segments = resolved.path.split('/');
+    if (segments.length % 2 !== 0 || segments.some((segment) => !segment)) {
+      throw new Error(`Invalid Firestore document path "${resolved.path}".`);
+    }
+    if (seenPaths.has(resolved.path)) {
+      throw new Error(`Duplicate Firestore document path "${resolved.path}".`);
+    }
+    if (!resolved.data || typeof resolved.data !== 'object' || Array.isArray(resolved.data)) {
+      throw new Error(`Document "${resolved.path}" must have an object data body.`);
+    }
+    seenPaths.add(resolved.path);
+    return {
+      path: resolved.path,
+      data: convertDateFields(resolved.data)
+    };
+  });
+}
+
 export async function insertSampleDocuments(db, documents) {
   for (let offset = 0; offset < documents.length; offset += 450) {
     const batch = db.batch();
@@ -350,7 +466,16 @@ export async function insertSampleDocuments(db, documents) {
 }
 
 function parseArguments(args) {
-  const options = { apply: false, allowConfiguredProject: false, projectId: '' };
+  const options = {
+    apply: false,
+    allowConfiguredProject: false,
+    projectId: '',
+    fixturePath: defaultFixturePath,
+    ownerUid: '',
+    ownerEmail: '',
+    shopperUid: '',
+    shopperEmail: ''
+  };
   for (let index = 0; index < args.length; index += 1) {
     if (args[index] === '--apply') {
       options.apply = true;
@@ -358,6 +483,21 @@ function parseArguments(args) {
       options.allowConfiguredProject = true;
     } else if (args[index] === '--project-id' && args[index + 1]) {
       options.projectId = args[index + 1];
+      index += 1;
+    } else if (args[index] === '--fixture' && args[index + 1]) {
+      options.fixturePath = path.resolve(repositoryRoot, args[index + 1]);
+      index += 1;
+    } else if (args[index] === '--owner-uid' && args[index + 1]) {
+      options.ownerUid = args[index + 1];
+      index += 1;
+    } else if (args[index] === '--owner-email' && args[index + 1]) {
+      options.ownerEmail = args[index + 1];
+      index += 1;
+    } else if (args[index] === '--shopper-uid' && args[index + 1]) {
+      options.shopperUid = args[index + 1];
+      index += 1;
+    } else if (args[index] === '--shopper-email' && args[index + 1]) {
+      options.shopperEmail = args[index + 1];
       index += 1;
     } else {
       throw new Error(`Unknown or incomplete argument: ${args[index]}`);
@@ -387,10 +527,13 @@ async function assertNotConfiguredProject(projectId, allowConfiguredProject) {
 async function main() {
   try {
     const options = parseArguments(process.argv.slice(2));
-    const fixture = JSON.parse(await readFile(fixturePath, 'utf8'));
-    const documents = buildSampleDocuments(fixture);
+    const fixture = JSON.parse(await readFile(options.fixturePath, 'utf8'));
+    const isJourneyFixture = Array.isArray(fixture.documents);
+    const documents = isJourneyFixture
+      ? buildJourneyDocuments(fixture, options)
+      : buildSampleDocuments(fixture);
 
-    console.log(`Prepared ${documents.length} sample documents across ${SAMPLE_COLLECTIONS.length + 3} collection paths.`);
+    console.log(`Prepared ${documents.length} ${isJourneyFixture ? 'journey' : 'sample'} documents.`);
     console.log(`Destination project: ${options.projectId}`);
     if (!options.apply) {
       console.log('Dry run only. Add --apply to write these sample documents.');

@@ -1,7 +1,7 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, NavigationEnd, NavigationError, NavigationCancel } from '@angular/router';
+import { ActivatedRoute, Router, NavigationEnd, NavigationError, NavigationCancel } from '@angular/router';
 import { OfflineStorageService } from '../../../core/services/offline-storage.service';
 import { IndexedDBService } from '../../../core/services/indexeddb.service';
 import { AuthService } from '../../../services/auth.service';
@@ -20,6 +20,7 @@ export class PolicyAgreementComponent implements OnInit {
   private offlineStorageService = inject(OfflineStorageService);
   private authService = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private indexedDBService = inject(IndexedDBService);
 
   // App constants
@@ -198,7 +199,7 @@ export class PolicyAgreementComponent implements OnInit {
       // Check if already agreed to policies
       if (offlineUser.isAgreedToPolicy) {
         console.log('✅ Policy Agreement: User already agreed, redirecting to onboarding...');
-        await this.router.navigate(['/onboarding']);
+        await this.router.navigateByUrl(this.getSafeReturnUrl() || '/onboarding');
         return;
       }
       
@@ -266,6 +267,12 @@ export class PolicyAgreementComponent implements OnInit {
       } catch (flagErr) {
         console.warn('📝 Policy Agreement: Failed to persist acceptance flags to IndexedDB', flagErr);
       }
+
+      const returnUrl = this.getSafeReturnUrl();
+      if (returnUrl) {
+        await this.router.navigateByUrl(returnUrl);
+        return;
+      }
       
       // Determine where to redirect based on user status
       const currentUser = this.authService.getCurrentUser();
@@ -285,8 +292,8 @@ export class PolicyAgreementComponent implements OnInit {
       
       if (hasValidPermissions) {
         // Redirect based on role
-        console.log('📍 Policy Agreement: User has valid permissions, redirecting to dashboard...');
-        await this.router.navigate(['/dashboard']);
+        console.log('📍 Policy Agreement: User has valid permissions, redirecting to onboarding...');
+        await this.router.navigate(['/onboarding']);
       } else {
         console.log('📍 Policy Agreement: User needs onboarding, redirecting to onboarding...');
         console.log('📍 Policy Agreement: About to navigate to /onboarding...');
@@ -324,6 +331,11 @@ export class PolicyAgreementComponent implements OnInit {
       this.isLoading.set(false);
       console.log('🔄 Policy Agreement: acceptPolicies() completed');
     }
+  }
+
+  private getSafeReturnUrl(): string | null {
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    return returnUrl?.startsWith('/') && !returnUrl.startsWith('//') ? returnUrl : null;
   }
 
   openTermsModal() {

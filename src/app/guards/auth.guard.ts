@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { getCheckoutAccessResult } from './checkout-auth.guard-utils';
 
 export const authGuard: CanActivateFn = (route, state) => {
   const router = inject(Router);
@@ -17,7 +18,7 @@ export const authGuard: CanActivateFn = (route, state) => {
   const currentPermission = authService.getCurrentPermission();
 
   const isOnboarding = !currentPermission?.companyId || currentPermission.roleId === 'visitor' || currentPermission.roleId === 'customer';
-  const isCompanyProfileRoute = state.url.includes('/dashboard/company-profile');
+  const isCompanyProfileRoute = state.url.includes('/create-company');
   const isBranchesRoute = state.url.includes('/branches');
   const isOnboardingRoute = state.url === '/onboarding';
 
@@ -41,7 +42,7 @@ export const authGuard: CanActivateFn = (route, state) => {
   // 🚫 Block access if no companyId and not on company-profile/branches
   if (!currentPermission?.companyId) {
     console.warn(`🛡️ AuthGuard: Missing companyId for ${state.url}, redirecting to company-profile`);
-    router.navigate(['/dashboard/company-profile']);
+    router.navigate(['/create-company']);
     return false;
   }
 
@@ -63,4 +64,11 @@ export const authGuard: CanActivateFn = (route, state) => {
 
   // Role-based checks are handled by roleGuard now
   return true;
+};
+
+export const checkoutAuthGuard: CanActivateFn = (_route, state) => {
+  const router = inject(Router);
+  const authService = inject(AuthService);
+
+  return getCheckoutAccessResult(router, authService.isAuthenticated(), state.url);
 };

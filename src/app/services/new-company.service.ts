@@ -17,11 +17,13 @@ import { OfflineDocumentService } from '../core/services/offline-document.servic
 import { Company } from '../interfaces/company.interface';
 import { Branch } from '../interfaces/branch.interface';
 import { Store } from '../interfaces/store.interface';
+import { StorefrontPublicationService } from './storefront-publication.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class NewCompanyService {
+  private readonly storefrontPublication = inject(StorefrontPublicationService);
   private readonly companiesSignal = signal<Company[]>([]);
   private readonly companiesCollection = 'companies';
   private readonly storesCollection = 'stores';
@@ -116,6 +118,7 @@ export class NewCompanyService {
       };
       // 🔥 NEW APPROACH: Use OfflineDocumentService for offline-safe creation
       const storeId = await this.offlineDocService.createDocument(this.storesCollection, newStore);
+      await this.storefrontPublication.syncStore(storeId, newStore);
 
       // Handle branches if they exist (optional UI property)
       if (branches && Array.isArray(branches) && branches.length > 0) {
@@ -191,6 +194,9 @@ export class NewCompanyService {
   await this.offlineDocService.deleteDocument(this.branchesCollection, branchDoc.id);
     }
 
+    // Hide the public storefront branch before deleting its source document.
+    await this.storefrontPublication.removeStore(storeId);
+
     // Then delete the store
   await this.offlineDocService.deleteDocument(this.storesCollection, storeId);
   }
@@ -204,6 +210,7 @@ export class NewCompanyService {
     };
     // 🔥 NEW APPROACH: Use OfflineDocumentService for offline-safe creation
     const documentId = await this.offlineDocService.createDocument(this.storesCollection, newStore);
+    await this.storefrontPublication.syncStore(documentId, newStore);
     console.log('✅ Store created with ID:', documentId, navigator.onLine ? '(online)' : '(offline)');
     return documentId;
   }
