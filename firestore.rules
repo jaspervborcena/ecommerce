@@ -125,7 +125,8 @@ service cloud.firestore {
     }
 
     match /storefront_branches/{branchId} {
-      allow read: if isSafePublicStorefrontBranch(resource.data);
+      allow get: if isSafePublicStorefrontBranch(resource.data);
+      allow list: if resource.data.status == 'active';
       allow create, update: if isAuthenticated() &&
         getAfter(/databases/$(database)/documents/branches/$(branchId)).data.uid == request.auth.uid &&
         isSafePublicStorefrontBranch(request.resource.data);
@@ -134,7 +135,8 @@ service cloud.firestore {
     }
 
     match /storefront_products/{productId} {
-      allow read: if isSafePublicStorefrontProduct(resource.data);
+      allow get: if isSafePublicStorefrontProduct(resource.data);
+      allow list: if resource.data.status == 'active';
       allow create, update: if isAuthenticated() &&
         getAfter(/databases/$(database)/documents/products/$(productId)).data.uid == request.auth.uid &&
         isSafePublicStorefrontProduct(request.resource.data);
