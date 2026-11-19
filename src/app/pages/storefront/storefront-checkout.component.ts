@@ -2,8 +2,7 @@ import { AfterViewInit, Component, computed, inject, NgZone, OnDestroy, OnInit, 
 import { CommonModule } from '@angular/common';
 import { Auth } from '@angular/fire/auth';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { Firestore, addDoc, collection, doc, getDoc } from '@angular/fire/firestore';
+import { Firestore, doc, getDoc } from '@angular/fire/firestore';
 import { AuthService } from '../../services/auth.service';
 import { StorefrontCartService } from '../../services/storefront-cart.service';
 import { Store } from '../../interfaces/store.interface';
@@ -21,6 +20,35 @@ interface DeliveryQuote {
   fee: number;
   currency: string;
   receivedAt: number;
+}
+
+interface CheckoutReviewSnapshot {
+  customerName: string;
+  phoneNumber: string;
+  shippingDetails: {
+    fullName: string;
+    contactNumber: string;
+    address: string;
+    houseNumber: string;
+    street: string;
+    barangay: string;
+    city: string;
+    province: string;
+    postalCode: string;
+  };
+  shipFrom: {
+    storeName: string;
+    branchName: string;
+    phoneNumber: string;
+    address: string;
+  };
+  items: Array<{ name: string; quantity: number; subtotal: number; currency?: string }>;
+  subtotal: number;
+  deliveryFee: number;
+  deliveryQuoteId: string | null;
+  includeDeliveryFee: boolean;
+  total: number;
+  currency: string;
 }
 
 @Component({
@@ -89,9 +117,27 @@ interface DeliveryQuote {
     .storefront-submit:focus-visible { outline: 3px solid rgba(101, 88, 220, 0.28); outline-offset: 3px; }
     .storefront-submit:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
     .checkout-message { margin: 1rem 0 0; font-size: 0.88rem; line-height: 1.5; }
+    .review-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.85fr); gap: 1.5rem; align-items: start; }
+    .review-details { display: grid; gap: 1rem; }
+    .review-card { padding: clamp(1.25rem, 3vw, 2rem); }
+    .review-card-title { margin: 0 0 0.85rem; color: #172033; font-size: 1rem; font-weight: 700; }
+    .review-line { margin: 0.35rem 0 0; color: #536075; font-size: 0.9rem; line-height: 1.5; overflow-wrap: anywhere; }
+    .review-line strong { color: #263248; }
+    .review-items { display: grid; gap: 0.75rem; margin-top: 1rem; }
+    .maya-payment { margin-top: 1.25rem; border-radius: 0.85rem; background: #f8fafc; padding: 1rem; text-align: center; }
+    .maya-qr-placeholder { display: grid; place-content: center; gap: 0.45rem; width: min(100%, 220px); aspect-ratio: 1; margin: 1rem auto; border: 2px dashed #9aa3b2; border-radius: 0.75rem; background: repeating-linear-gradient(45deg, #f8fafc, #f8fafc 12px, #eef1f6 12px, #eef1f6 24px); color: #374151; }
+    .maya-qr-placeholder strong { color: #5145cd; font-size: 1.3rem; letter-spacing: 0.08em; }
+    .maya-qr-placeholder span { font-size: 0.85rem; font-weight: 800; letter-spacing: 0.08em; }
+    .maya-qr-placeholder small { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; }
+    .maya-payment-status { margin: 0.75rem 0 0; color: #92400e; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.06em; }
+    .review-actions { display: grid; gap: 0.75rem; margin-top: 1.25rem; }
+    .review-back-button { min-height: 2.8rem; border: 1px solid #d6dce7; border-radius: 0.7rem; background: #fff; color: #374151; font: inherit; font-weight: 650; cursor: pointer; }
+    .review-back-button:focus-visible { outline: 3px solid rgba(101, 88, 220, 0.24); outline-offset: 2px; }
+    .review-payment-button { min-height: 2.8rem; border: 0; border-radius: 0.7rem; background: #a3a3b2; color: #fff; font: inherit; font-weight: 700; cursor: not-allowed; }
     @media (max-width: 720px) {
       .checkout-shell { width: min(100% - 1.25rem, 560px); padding: 2rem 0 3rem; }
       .checkout-grid { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+      .review-layout { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
       .summary-card { padding: 1.25rem; }
     }
     @media (max-width: 480px) {
@@ -104,10 +150,15 @@ interface DeliveryQuote {
     <main class="checkout-shell">
       <header class="checkout-heading">
         <p class="checkout-eyebrow">Your order</p>
-        <h1 class="checkout-title">Checkout</h1>
-        <p class="checkout-description">Review your order and add your details to complete your purchase.</p>
+        <h1 class="checkout-title">{{ checkoutStage() === 'details' ? 'Checkout' : 'Review your order' }}</h1>
+        <p class="checkout-description">
+          {{ checkoutStage() === 'details'
+            ? 'Review your order and add your details before continuing.'
+            : 'Confirm your locked order details before Maya payment.' }}
+        </p>
       </header>
 
+      @if (checkoutStage() === 'details') {
       <form [formGroup]="form" (ngSubmit)="submit()" class="checkout-grid">
         <div class="checkout-details">
           <section class="checkout-card shipping-card" formGroupName="shippingDetails" aria-labelledby="shipping-details-title">
@@ -149,7 +200,7 @@ interface DeliveryQuote {
                     <div class="address-suggestions" role="listbox" aria-label="Address suggestions">
                       @for (suggestion of addressSuggestions(); track $index) {
                         <button type="button" class="address-suggestion" role="option"
-                          (mousedown)="$event.preventDefault()"
+                          (pointerdown)="onAddressSuggestionPointerDown($event, suggestion)"
                           (click)="selectAddressSuggestion(suggestion)"
                           (keydown.enter)="selectAddressSuggestion(suggestion); $event.preventDefault()"
                           (keydown.space)="selectAddressSuggestion(suggestion); $event.preventDefault()">
@@ -282,10 +333,82 @@ interface DeliveryQuote {
                 Check this box to calculate the Lalamove delivery fee.
               }
             </p>
-            <button type="submit" class="storefront-submit" [disabled]="isSubmitting() || items().length === 0 || (includeDeliveryFeeInPayment() && (!deliveryQuoteValid() || deliveryQuoteLoading()))">{{ isSubmitting() ? 'Placing order...' : 'Place Order' }}</button>
+            <button type="submit" class="storefront-submit" [disabled]="isSubmitting() || items().length === 0 || (includeDeliveryFeeInPayment() && (!deliveryQuoteValid() || deliveryQuoteLoading()))">{{ isSubmitting() ? 'Preparing review...' : 'Review order' }}</button>
             <p *ngIf="message()" class="checkout-message" [class.text-emerald-600]="isSuccess()" [class.text-rose-600]="!isSuccess()" role="status" aria-live="polite">{{ message() }}</p>
         </aside>
       </form>
+      } @else {
+        <section *ngIf="reviewSnapshot() as review" class="review-layout" aria-label="Order review">
+          <div class="review-details">
+            <section class="checkout-card review-card">
+              <h2 class="review-card-title">Customer details</h2>
+              <p class="review-line"><strong>Name:</strong> {{ review.customerName }}</p>
+              <p class="review-line"><strong>Phone:</strong> {{ review.phoneNumber }}</p>
+            </section>
+
+            <section class="checkout-card review-card">
+              <h2 class="review-card-title">Ship to</h2>
+              <p class="review-line"><strong>Recipient:</strong> {{ review.shippingDetails.fullName }}</p>
+              <p class="review-line"><strong>Contact:</strong> {{ review.shippingDetails.contactNumber }}</p>
+              <p class="review-line"><strong>Address:</strong> {{ review.shippingDetails.address }}</p>
+              <p class="review-line">
+                <strong>Address details:</strong>
+                {{ review.shippingDetails.houseNumber }}, {{ review.shippingDetails.street }},
+                {{ review.shippingDetails.barangay }}, {{ review.shippingDetails.city }},
+                {{ review.shippingDetails.province }} {{ review.shippingDetails.postalCode }}
+              </p>
+            </section>
+
+            <section class="checkout-card review-card">
+              <h2 class="review-card-title">Ship from</h2>
+              <p class="review-line"><strong>Store:</strong> {{ review.shipFrom.storeName }}</p>
+              <p class="review-line"><strong>Branch:</strong> {{ review.shipFrom.branchName }}</p>
+              <p class="review-line"><strong>Contact:</strong> {{ review.shipFrom.phoneNumber }}</p>
+              <p class="review-line"><strong>Pickup address:</strong> {{ review.shipFrom.address }}</p>
+            </section>
+          </div>
+
+          <aside class="checkout-card summary-card">
+            <h2 class="summary-title">Order summary</h2>
+            <div class="review-items">
+              @for (item of review.items; track $index) {
+                <div class="summary-item">
+                  <span class="summary-item-name">{{ item.name }} × {{ item.quantity }}</span>
+                  <span class="summary-item-price">{{ item.subtotal | currency:(item.currency || review.currency) }}</span>
+                </div>
+              }
+            </div>
+            <div class="summary-totals">
+              <div class="summary-total"><span>Subtotal</span><span>{{ review.subtotal | currency:review.currency }}</span></div>
+              @if (review.deliveryQuoteId) {
+                <div class="summary-total"><span>Lalamove delivery fee</span><span>{{ review.deliveryFee | currency:review.currency }}</span></div>
+              } @else if (!review.includeDeliveryFee) {
+                <div class="summary-total"><span>Delivery fee</span><span>Pay upon arrival</span></div>
+              }
+              <div class="summary-total summary-grand-total"><span>Total</span><span>{{ review.total | currency:review.currency }}</span></div>
+            </div>
+
+            <section class="maya-payment" aria-labelledby="maya-payment-title">
+              <h3 id="maya-payment-title" class="review-card-title">Pay with Maya</h3>
+              <p class="review-line">Amount due: <strong>{{ review.total | currency:review.currency }}</strong></p>
+              <div class="maya-qr-placeholder" aria-label="Maya QR placeholder. Not scannable.">
+                <strong>MAYA</strong>
+                <span>QR PLACEHOLDER</span>
+                <small>NOT SCANNABLE</small>
+              </div>
+              <p class="review-line">
+                Maya checkout and webhook verification are not configured yet. This placeholder cannot accept payment.
+              </p>
+              <p class="maya-payment-status">ORDER NOT SUBMITTED — A VERIFIED PAYMENT IS REQUIRED</p>
+            </section>
+
+            <div class="review-actions">
+              <button type="button" class="review-back-button" (click)="backToCheckout()">Back to edit details</button>
+              <button type="button" class="review-payment-button" disabled>Maya payment setup required</button>
+            </div>
+          </aside>
+        </section>
+      }
     </main>
   `
 })
@@ -295,7 +418,6 @@ export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDes
   private readonly ngZone = inject(NgZone);
   private readonly cartService = inject(StorefrontCartService);
   private readonly firestore = inject(Firestore);
-  private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
 
   readonly items = this.cartService.items;
@@ -315,6 +437,8 @@ export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDes
   readonly isSubmitting = signal(false);
   readonly message = signal('');
   readonly isSuccess = signal(false);
+  readonly checkoutStage = signal<'details' | 'review'>('details');
+  readonly reviewSnapshot = signal<CheckoutReviewSnapshot | null>(null);
   readonly isShippingAddressExpanded = signal(true);
   readonly addressAutocompleteStatus = signal('');
   readonly addressSuggestions = signal<any[]>([]);
@@ -327,6 +451,7 @@ export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDes
   private autocompleteSessionToken: any;
   private addressSearchTimer?: number;
   private addressSearchSequence = 0;
+  private addressSelectionInProgress = false;
   private selectedAddressText = '';
   private pickupCoordinates: Coordinates | null = null;
   private storeDetailsLoadPromise?: Promise<void>;
@@ -468,6 +593,9 @@ export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDes
 
   onAddressBlur(): void {
     window.setTimeout(() => {
+      if (this.addressSelectionInProgress) {
+        return;
+      }
       const address = this.form.controls.shippingDetails.controls.address.value?.trim() || '';
       if (address && address !== this.selectedAddressText) {
         void this.geocodeTypedAddress(address, this.googleMaps);
@@ -475,12 +603,18 @@ export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDes
     }, 200);
   }
 
+  onAddressSuggestionPointerDown(event: PointerEvent, suggestion: any): void {
+    event.preventDefault();
+    void this.selectAddressSuggestion(suggestion);
+  }
+
   async selectAddressSuggestion(suggestion: any): Promise<void> {
     const prediction = suggestion?.placePrediction;
-    if (!prediction || !this.googleMaps) {
+    if (!prediction || !this.googleMaps || this.addressSelectionInProgress) {
       return;
     }
 
+    this.addressSelectionInProgress = true;
     if (this.addressSearchTimer !== undefined) {
       window.clearTimeout(this.addressSearchTimer);
     }
@@ -540,6 +674,8 @@ export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDes
       this.ngZone.run(() => {
         this.addressAutocompleteStatus.set('Address search unavailable. Please try selecting the address again.');
       });
+    } finally {
+      this.addressSelectionInProgress = false;
     }
   }
 
@@ -887,9 +1023,23 @@ export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDes
       return;
     }
 
-    if (this.form.invalid || this.items().length === 0) {
+    if (this.items().length === 0) {
+      this.message.set('Your cart is empty. Add at least one item before continuing.');
+      this.isSuccess.set(false);
+      return;
+    }
+
+    const shippingDetails = this.form.controls.shippingDetails.getRawValue();
+    if (!this.form.controls.customerName.value?.trim()) {
+      this.form.controls.customerName.setValue(shippingDetails.fullName?.trim() || '');
+    }
+    if (!this.form.controls.phoneNumber.value?.trim()) {
+      this.form.controls.phoneNumber.setValue(shippingDetails.contactNumber?.trim() || '');
+    }
+
+    if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.message.set('Please complete all required shipping and customer details, and add at least one item.');
+      this.message.set(`Please fill in the required fields: ${this.getMissingRequiredFieldLabels().join(', ')}.`);
       this.isSuccess.set(false);
       return;
     }
@@ -914,59 +1064,80 @@ export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDes
 
       const store = storeSnapshot.data() as Partial<Store>;
       if (!store.storeName || !store.branchName || !store.address || !store.phoneNumber) {
-        this.message.set('The store shipping details are incomplete. Please contact the store before placing your order.');
+        this.message.set('The store shipping details are incomplete. Please contact the store before continuing.');
         this.isSuccess.set(false);
         return;
       }
 
-      const shippingDetails = this.form.controls.shippingDetails.getRawValue();
       const deliveryQuote = this.deliveryQuoteValid() ? this.deliveryQuote() : null;
-      const orderTotal = this.orderTotal();
-      const order = {
-        uid: user.uid,
-        createdAt: new Date(),
-        customerName: this.form.value.customerName,
-        phoneNumber: this.form.value.phoneNumber,
-        shippingDetails,
+      const includeDeliveryFee = this.includeDeliveryFeeInPayment();
+      const deliveryFee = deliveryQuote?.fee || 0;
+      this.reviewSnapshot.set({
+        customerName: this.form.controls.customerName.value?.trim() || '',
+        phoneNumber: this.form.controls.phoneNumber.value?.trim() || '',
+        shippingDetails: {
+          fullName: shippingDetails.fullName?.trim() || '',
+          contactNumber: shippingDetails.contactNumber?.trim() || '',
+          address: shippingDetails.address?.trim() || '',
+          houseNumber: shippingDetails.houseNumber?.trim() || '',
+          street: shippingDetails.street?.trim() || '',
+          barangay: shippingDetails.barangay?.trim() || '',
+          city: shippingDetails.city?.trim() || '',
+          province: shippingDetails.province?.trim() || '',
+          postalCode: shippingDetails.postalCode?.trim() || ''
+        },
         shipFrom: {
-          storeCode: store['storeCode'] || '',
           storeName: store.storeName,
           branchName: store.branchName,
-          branchAddress: store.address,
-          contactNumber: store.phoneNumber
+          phoneNumber: store.phoneNumber,
+          address: store.address
         },
-        items: snapshot.items,
+        items: snapshot.items.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          subtotal: item.subtotal,
+          currency: item.currency
+        })),
         subtotal: snapshot.subtotal,
-        deliveryFee: deliveryQuote?.fee || 0,
-        deliveryFeeIncludedInPayment: this.includeDeliveryFeeInPayment(),
-        payDeliveryUponArrival: !this.includeDeliveryFeeInPayment(),
-        deliveryQuote: deliveryQuote ? {
-          quotationId: deliveryQuote.quotationId,
-          expiresAt: deliveryQuote.expiresAt,
-          serviceType: deliveryQuote.serviceType,
-          environment: 'sandbox'
-        } : null,
-        total: orderTotal,
-        currency: this.includeDeliveryFeeInPayment()
-          ? deliveryQuote?.currency || snapshot.currency
-          : snapshot.currency,
-        storeId: snapshot.storeId,
-        roleId: 'customer',
-        status: 'REQUEST'
-      };
-
-      await addDoc(collection(this.firestore, 'storefront_orders'), order as any);
-      this.cartService.clear();
-      this.message.set('Your order request was sent to the store.');
-      this.isSuccess.set(true);
-      this.form.reset();
-      window.setTimeout(() => this.router.navigate(['/store/' + snapshot.storeId]), 700);
+        deliveryFee,
+        deliveryQuoteId: deliveryQuote?.quotationId || null,
+        includeDeliveryFee,
+        total: snapshot.subtotal + (includeDeliveryFee ? deliveryFee : 0),
+        currency: includeDeliveryFee ? deliveryQuote?.currency || snapshot.currency : snapshot.currency
+      });
+      this.form.disable();
+      this.checkoutStage.set('review');
+      this.message.set('');
+      this.isSuccess.set(false);
     } catch (err) {
-      console.error('Firestore order submission failed.', err);
-      this.message.set('Could not place the order. Your cart is unchanged; please try again.');
+      console.error('Could not prepare the storefront checkout review.', err);
+      this.message.set('Could not prepare the order review. Your cart is unchanged; please try again.');
       this.isSuccess.set(false);
     } finally {
       this.isSubmitting.set(false);
     }
+  }
+
+  backToCheckout(): void {
+    this.form.enable();
+    this.reviewSnapshot.set(null);
+    this.checkoutStage.set('details');
+  }
+
+  private getMissingRequiredFieldLabels(): string[] {
+    const shipping = this.form.controls.shippingDetails.controls;
+    return [
+      { label: 'Customer name', missing: this.form.controls.customerName.invalid },
+      { label: 'Customer phone number', missing: this.form.controls.phoneNumber.invalid },
+      { label: 'Recipient full name', missing: shipping.fullName.invalid },
+      { label: 'Recipient contact number', missing: shipping.contactNumber.invalid },
+      { label: 'Address', missing: shipping.address.invalid },
+      { label: 'House / unit number', missing: shipping.houseNumber.invalid },
+      { label: 'Street', missing: shipping.street.invalid },
+      { label: 'Barangay', missing: shipping.barangay.invalid },
+      { label: 'City / municipality', missing: shipping.city.invalid },
+      { label: 'Province / region', missing: shipping.province.invalid },
+      { label: 'Postal code', missing: shipping.postalCode.invalid }
+    ].filter(field => field.missing).map(field => field.label);
   }
 }
