@@ -40,6 +40,10 @@ export class HomeComponent {
     }
     this.router.navigate(['/create-company']);
   }
+
+  navigateToShopping() {
+    this.router.navigate(['/onboarding']);
+  }
   
   protected toggleUserMenu() {
     this.isUserMenuOpen.set(!this.isUserMenuOpen());

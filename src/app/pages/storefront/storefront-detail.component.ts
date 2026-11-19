@@ -74,7 +74,11 @@ export class StorefrontDetailComponent {
       if (!snap.exists()) {
         this.product.set(null);
       } else {
-        this.product.set({ id: snap.id, ...(snap.data() as any) });
+        const product = { id: snap.id, ...(snap.data() as any) };
+        this.product.set(product);
+        if (typeof product.storeId === 'string' && product.storeId) {
+          this.cartService.setActiveStore(product.storeId, product.currency || 'PHP');
+        }
       }
     } catch (err) {
       console.error('Storefront detail load error', err);

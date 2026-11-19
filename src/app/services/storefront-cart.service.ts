@@ -43,6 +43,22 @@ export class StorefrontCartService {
     return this.cart();
   }
 
+  setActiveStore(storeId: string, currency = 'PHP'): void {
+    const normalizedStoreId = storeId?.trim();
+    if (!normalizedStoreId) {
+      return;
+    }
+
+    const current = this.cart();
+    const next = this.buildSnapshot(
+      current.items,
+      normalizedStoreId,
+      currency || current.currency || 'PHP'
+    );
+    this.cart.set(next);
+    this.persist(next);
+  }
+
   addItem(product: StorefrontCartProduct, quantity = 1): void {
     const current = this.cart();
     const existing = current.items.find(item => item.productId === product.id);

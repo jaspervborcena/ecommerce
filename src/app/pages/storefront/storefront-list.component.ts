@@ -115,6 +115,7 @@ export class StorefrontListComponent {
     try {
       this.isLoading.set(true);
       const storeId = this.route.snapshot.paramMap.get('storeId') || '';
+      this.cartService.setActiveStore(storeId);
       await this.loadStoreDetails(storeId);
       const productsRef = collection(this.firestore, 'storefront_products');
       const q = query(productsRef, where('storeId', '==', storeId), where('status', '==', 'active'));

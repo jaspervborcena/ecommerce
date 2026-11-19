@@ -12,6 +12,9 @@ export interface AppEnvironment {
     appId: string;
     measurementId?: string;
   };
+  googleMaps: {
+    apiKey: string;
+  };
   api: {
     baseUrl: string;
     ordersApi: string;

@@ -14,6 +14,9 @@ export const environment = {
     appId: "1:251258556341:web:28cdcafbdb4ad89675d3fc",
     measurementId: "G-MG8T2RZ051"
   },
+  googleMaps: {
+    apiKey: "AIzaSyDNIYovvzNKVj40h99kxOHu5yfEUzx7OYA"
+  },
   api: {
     baseUrl: "",
     ordersApi: "",
