@@ -1,5 +1,6 @@
-import { AfterViewInit, Component, computed, inject, NgZone, signal } from '@angular/core';
+import { AfterViewInit, Component, computed, inject, NgZone, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Auth } from '@angular/fire/auth';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Firestore, addDoc, collection, doc, getDoc } from '@angular/fire/firestore';
@@ -7,6 +8,20 @@ import { AuthService } from '../../services/auth.service';
 import { StorefrontCartService } from '../../services/storefront-cart.service';
 import { Store } from '../../interfaces/store.interface';
 import { environment } from '../../../environments/environment';
+
+interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
+interface DeliveryQuote {
+  quotationId: string;
+  expiresAt: string | null;
+  serviceType: string;
+  fee: number;
+  currency: string;
+  receivedAt: number;
+}
 
 @Component({
   selector: 'app-storefront-checkout',
@@ -33,6 +48,10 @@ import { environment } from '../../../environments/environment';
     .shipping-toggle-icon.expanded { transform: rotate(180deg); }
     .shipping-summary { margin: 0 0 1.25rem; border-radius: 0.65rem; background: #f8fafc; padding: 0.85rem; color: #536075; font-size: 0.88rem; line-height: 1.55; }
     .shipping-summary-name { color: #172033; font-weight: 700; }
+    .ship-from-details { margin-top: 1.2rem; border-radius: 0.75rem; background: #f8fafc; padding: 1rem; }
+    .ship-from-title { margin: 0 0 0.65rem; color: #172033; font-size: 0.9rem; font-weight: 700; }
+    .ship-from-line { margin: 0.3rem 0 0; color: #536075; font-size: 0.86rem; line-height: 1.5; }
+    .ship-from-label { color: #374151; font-weight: 600; }
     .shipping-contact-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.15rem; }
     .address-autocomplete { position: relative; z-index: 30; }
     .address-suggestions { position: absolute; z-index: 1000; top: calc(100% + 0.25rem); left: 0; right: 0; max-height: 16rem; overflow-y: auto; border: 1px solid #d6dce7; border-radius: 0.65rem; background: #fff; box-shadow: 0 8px 24px rgba(28, 39, 64, 0.14); pointer-events: auto; }
@@ -60,6 +79,8 @@ import { environment } from '../../../environments/environment';
     .summary-total { display: flex; justify-content: space-between; gap: 1rem; color: #647084; font-size: 0.9rem; }
     .summary-grand-total { color: #172033; font-size: 1rem; font-weight: 700; }
     .payment-note { margin: 1rem 0 0; border-radius: 0.65rem; background: #f3f2ff; padding: 0.8rem 0.9rem; color: #5145cd; font-size: 0.84rem; font-weight: 600; }
+    .payment-note.error { background: #fff1f2; color: #b91c1c; }
+    .quote-retry { margin-left: 0.4rem; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
     .payment-option { display: flex; align-items: flex-start; gap: 0.55rem; margin-top: 1rem; color: #374151; font-size: 0.88rem; line-height: 1.45; cursor: pointer; }
     .payment-option input { width: 1rem; height: 1rem; margin-top: 0.15rem; accent-color: #5145cd; }
     .payment-option:has(input:disabled) { opacity: 0.55; cursor: not-allowed; }
@@ -171,6 +192,29 @@ import { environment } from '../../../environments/environment';
               </div>
             </div>
             }
+            @if (shippingAddressProvided()) {
+              <div class="ship-from-details" aria-live="polite">
+                <h3 class="ship-from-title">Ship from</h3>
+                @if (storeDetailsLoading()) {
+                  <p class="ship-from-line">Loading store pickup details...</p>
+                } @else if (storeDetails()) {
+                  <p class="ship-from-line">
+                    <span class="ship-from-label">Store:</span> {{ storeDetails()?.storeName }}
+                  </p>
+                  <p class="ship-from-line">
+                    <span class="ship-from-label">Branch:</span> {{ storeDetails()?.branchName }}
+                  </p>
+                  <p class="ship-from-line">
+                    <span class="ship-from-label">Contact:</span> {{ storeDetails()?.phoneNumber }}
+                  </p>
+                  <p class="ship-from-line">
+                    <span class="ship-from-label">Pickup address:</span> {{ storeDetails()?.address }}
+                  </p>
+                } @else {
+                  <p class="ship-from-line" role="status">{{ storeDetailsError() }}</p>
+                }
+              </div>
+            }
           </section>
 
           <section class="checkout-card customer-card" aria-labelledby="customer-details-title">
@@ -199,30 +243,55 @@ import { environment } from '../../../environments/environment';
             </div>
             <div class="summary-totals">
               <div class="summary-total"><span>Subtotal</span><span>{{ subtotal() | currency:(currency() || 'PHP') }}</span></div>
+              @if (deliveryQuoteLoading()) {
+                <div class="summary-total"><span>Lalamove delivery fee</span><span>Calculating...</span></div>
+              } @else if (deliveryQuoteValid()) {
+                <div class="summary-total">
+                  <span>Lalamove delivery fee</span>
+                  <span>{{ deliveryFee() | currency:(deliveryQuote()?.currency || 'PHP') }}</span>
+                </div>
+              }
               <div class="summary-total summary-grand-total"><span>Total</span><span>{{ orderTotal() | currency:(currency() || 'PHP') }}</span></div>
             </div>
             <label class="payment-option">
-              <input type="checkbox" [checked]="includeDeliveryFeeInPayment()" [disabled]="!shippingAddressProvided()" (change)="toggleDeliveryFeePayment($event)" />
+              <input type="checkbox" [checked]="includeDeliveryFeeInPayment()" (change)="toggleDeliveryFeePayment($event)" />
               <span>Include delivery fee in payment</span>
             </label>
-            <p class="payment-note">
+            <p class="payment-note" [class.error]="deliveryQuoteError()" role="status" aria-live="polite">
               @if (!shippingAddressProvided()) {
-                Enter an address to calculate the delivery fee with a quotation.
+                Enter a ship-to address to get a Lalamove quote. You can check this box first.
+              } @else if (deliveryQuoteLoading()) {
+                Getting your Lalamove Motorcycle quote...
+              } @else if (deliveryQuoteError()) {
+                {{ deliveryQuoteError() }}
+                @if (includeDeliveryFeeInPayment()) {
+                  <button type="button" class="quote-retry" (click)="requestLalamoveQuote()">Retry</button>
+                }
+              } @else if (deliveryQuoteExpired()) {
+                The Lalamove quote expired. Get a fresh quote before placing your order.
+                @if (includeDeliveryFeeInPayment()) {
+                  <button type="button" class="quote-retry" (click)="requestLalamoveQuote()">Get new quote</button>
+                }
+              } @else if (deliveryQuoteValid() && includeDeliveryFeeInPayment()) {
+                Lalamove delivery fee is included in payment.
+              } @else if (deliveryQuoteValid()) {
+                Lalamove delivery fee will be paid upon arrival.
               } @else if (includeDeliveryFeeInPayment()) {
-                Delivery fee is included in payment. It remains ₱0.00 until a delivery quotation is available.
+                Select a suggested address or finish entering it to calculate the Lalamove quote.
               } @else {
-                Delivery fee is unpaid and will be paid upon arrival when a delivery quotation is available.
+                Check this box to calculate the Lalamove delivery fee.
               }
             </p>
-            <button type="submit" class="storefront-submit" [disabled]="isSubmitting() || items().length === 0">{{ isSubmitting() ? 'Placing order...' : 'Place Order' }}</button>
+            <button type="submit" class="storefront-submit" [disabled]="isSubmitting() || items().length === 0 || (includeDeliveryFeeInPayment() && (!deliveryQuoteValid() || deliveryQuoteLoading()))">{{ isSubmitting() ? 'Placing order...' : 'Place Order' }}</button>
             <p *ngIf="message()" class="checkout-message" [class.text-emerald-600]="isSuccess()" [class.text-rose-600]="!isSuccess()" role="status" aria-live="polite">{{ message() }}</p>
         </aside>
       </form>
     </main>
   `
 })
-export class StorefrontCheckoutComponent implements AfterViewInit {
+export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
+  private readonly firebaseAuth = inject(Auth);
   private readonly ngZone = inject(NgZone);
   private readonly cartService = inject(StorefrontCartService);
   private readonly firestore = inject(Firestore);
@@ -232,22 +301,38 @@ export class StorefrontCheckoutComponent implements AfterViewInit {
   readonly items = this.cartService.items;
   readonly subtotal = this.cartService.subtotal;
   readonly currency = this.cartService.currency;
-  readonly deliveryFee = 0;
+  readonly deliveryQuote = signal<DeliveryQuote | null>(null);
+  readonly deliveryQuoteLoading = signal(false);
+  readonly deliveryQuoteError = signal('');
+  readonly deliveryFee = computed(() => this.deliveryQuote()?.fee || 0);
+  readonly deliveryQuoteExpired = signal(false);
+  readonly deliveryQuoteValid = computed(() => !!this.deliveryQuote() && !this.deliveryQuoteExpired());
   readonly includeDeliveryFeeInPayment = signal(false);
   readonly shippingAddressProvided = signal(false);
-  readonly orderTotal = computed(() => this.subtotal());
+  readonly orderTotal = computed(() =>
+    this.subtotal() + (this.includeDeliveryFeeInPayment() && this.deliveryQuoteValid() ? this.deliveryFee() : 0)
+  );
   readonly isSubmitting = signal(false);
   readonly message = signal('');
   readonly isSuccess = signal(false);
   readonly isShippingAddressExpanded = signal(true);
   readonly addressAutocompleteStatus = signal('');
   readonly addressSuggestions = signal<any[]>([]);
+  readonly storeDetails = signal<Pick<Store, 'storeName' | 'branchName' | 'address' | 'phoneNumber'> | null>(null);
+  readonly storeDetailsLoading = signal(true);
+  readonly storeDetailsError = signal('');
+  readonly destinationCoordinates = signal<Coordinates | null>(null);
   private googleMaps: any;
   private placesLibrary: any;
   private autocompleteSessionToken: any;
   private addressSearchTimer?: number;
   private addressSearchSequence = 0;
   private selectedAddressText = '';
+  private pickupCoordinates: Coordinates | null = null;
+  private storeDetailsLoadPromise?: Promise<void>;
+  private quoteRequestSequence = 0;
+  private quotedRouteKey = '';
+  private quoteExpiryTimer?: number;
 
   readonly form = this.fb.group({
     shippingDetails: this.fb.group({
@@ -265,6 +350,19 @@ export class StorefrontCheckoutComponent implements AfterViewInit {
     phoneNumber: ['', Validators.required]
   });
 
+  ngOnInit(): void {
+    void this.loadStoreDetails();
+  }
+
+  ngOnDestroy(): void {
+    if (this.addressSearchTimer !== undefined) {
+      window.clearTimeout(this.addressSearchTimer);
+    }
+    if (this.quoteExpiryTimer !== undefined) {
+      window.clearTimeout(this.quoteExpiryTimer);
+    }
+  }
+
   toggleShippingAddress(): void {
     this.isShippingAddressExpanded.update(expanded => !expanded);
   }
@@ -275,27 +373,81 @@ export class StorefrontCheckoutComponent implements AfterViewInit {
   }
 
   toggleDeliveryFeePayment(event: Event): void {
-    if (!this.shippingAddressProvided()) {
-      this.includeDeliveryFeeInPayment.set(false);
-      return;
+    const shouldInclude = (event.target as HTMLInputElement).checked;
+    this.includeDeliveryFeeInPayment.set(shouldInclude);
+    if (shouldInclude) {
+      void this.requestLalamoveQuote();
+    } else {
+      this.deliveryQuoteError.set('');
     }
-    this.includeDeliveryFeeInPayment.set((event.target as HTMLInputElement).checked);
   }
 
   ngAfterViewInit(): void {
     this.loadGooglePlaces();
   }
 
+  private loadStoreDetails(): Promise<void> {
+    if (!this.storeDetailsLoadPromise) {
+      this.storeDetailsLoadPromise = this.fetchStoreDetails();
+    }
+    return this.storeDetailsLoadPromise;
+  }
+
+  private async fetchStoreDetails(): Promise<void> {
+    const storeId = this.cartService.getCartSnapshot().storeId;
+    if (!storeId) {
+      this.storeDetailsError.set('Store details could not be found. Return to the storefront and try again.');
+      this.storeDetailsLoading.set(false);
+      return;
+    }
+
+    try {
+      const storeSnapshot = await getDoc(doc(this.firestore, 'stores', storeId));
+      if (!storeSnapshot.exists()) {
+        this.storeDetailsError.set('Store details could not be found. Return to the storefront and try again.');
+        return;
+      }
+
+      const store = storeSnapshot.data() as Partial<Store>;
+      if (!store.storeName || !store.branchName || !store.address || !store.phoneNumber) {
+        this.storeDetailsError.set('The store pickup details are incomplete. Please contact the store.');
+        return;
+      }
+
+      this.storeDetails.set({
+        storeName: store.storeName,
+        branchName: store.branchName,
+        address: store.address,
+        phoneNumber: store.phoneNumber
+      });
+    } catch (error) {
+      console.error('Failed to load store pickup details for checkout.', error);
+      this.storeDetailsError.set('Could not load the store pickup details. Please try again.');
+    } finally {
+      this.storeDetailsLoading.set(false);
+    }
+  }
+
   onAddressInput(event: Event): void {
     const address = (event.target as HTMLInputElement).value;
     this.form.controls.shippingDetails.controls.address.setValue(address);
     this.shippingAddressProvided.set(address.trim().length > 0);
+    this.destinationCoordinates.set(null);
+    this.deliveryQuote.set(null);
+    this.deliveryQuoteExpired.set(false);
+    if (this.quoteExpiryTimer !== undefined) {
+      window.clearTimeout(this.quoteExpiryTimer);
+      this.quoteExpiryTimer = undefined;
+    }
+    this.deliveryQuoteError.set('');
+    this.deliveryQuoteLoading.set(false);
+    this.quoteRequestSequence++;
+    this.quotedRouteKey = '';
     this.addressSuggestions.set([]);
     this.selectedAddressText = '';
     this.addressSearchSequence++;
 
     if (!address.trim()) {
-      this.includeDeliveryFeeInPayment.set(false);
       this.addressAutocompleteStatus.set('');
       return;
     }
@@ -339,6 +491,7 @@ export class StorefrontCheckoutComponent implements AfterViewInit {
       const place = prediction.toPlace();
       await place.fetchFields({ fields: ['addressComponents', 'formattedAddress', 'location'] });
       const components = place.addressComponents || [];
+      const coordinates = this.coordinatesFromLocation(place.location);
       const getComponent = (...types: string[]): string => {
         const component = types
           .map(type => components.find((item: any) => item.types?.includes(type)))
@@ -369,6 +522,7 @@ export class StorefrontCheckoutComponent implements AfterViewInit {
           province: getComponent('administrative_area_level_1'),
           postalCode: getComponent('postal_code')
         });
+        this.destinationCoordinates.set(coordinates);
         this.shippingAddressProvided.set(formattedAddress.trim().length > 0);
         this.selectedAddressText = formattedAddress.trim();
         this.addressAutocompleteStatus.set(
@@ -376,6 +530,11 @@ export class StorefrontCheckoutComponent implements AfterViewInit {
         );
       });
       this.autocompleteSessionToken = new this.placesLibrary.AutocompleteSessionToken();
+      if (coordinates) {
+        void this.requestLalamoveQuote();
+      } else {
+        await this.geocodeTypedAddress(formattedAddress, this.googleMaps);
+      }
     } catch (error) {
       console.error('Google Places address selection failed.', error);
       this.ngZone.run(() => {
@@ -466,6 +625,144 @@ export class StorefrontCheckoutComponent implements AfterViewInit {
     }
   }
 
+  async requestLalamoveQuote(): Promise<void> {
+    if (!this.includeDeliveryFeeInPayment() || !this.shippingAddressProvided() || this.deliveryQuoteLoading()) {
+      return;
+    }
+
+    const destinationCoordinates = this.destinationCoordinates();
+    if (!destinationCoordinates) {
+      this.deliveryQuoteError.set('Select a suggested address or finish entering the address to get a Lalamove quote.');
+      return;
+    }
+
+    const requestSequence = ++this.quoteRequestSequence;
+    this.deliveryQuoteLoading.set(true);
+    this.deliveryQuoteError.set('');
+
+    try {
+      await this.loadStoreDetails();
+      const store = this.storeDetails();
+      const storeId = this.cartService.getCartSnapshot().storeId;
+      if (!store || !storeId) {
+        throw new Error(this.storeDetailsError() || 'Store pickup details are unavailable.');
+      }
+
+      const pickupCoordinates = await this.resolvePickupCoordinates(store.address);
+      if (requestSequence !== this.quoteRequestSequence) {
+        return;
+      }
+
+      const routeKey = [
+        storeId,
+        pickupCoordinates.lat.toFixed(5),
+        pickupCoordinates.lng.toFixed(5),
+        destinationCoordinates.lat.toFixed(5),
+        destinationCoordinates.lng.toFixed(5)
+      ].join(':');
+      const currentQuote = this.deliveryQuote();
+      if (currentQuote && this.quotedRouteKey === routeKey && this.deliveryQuoteValid()) {
+        return;
+      }
+
+      const firebaseUser = this.firebaseAuth.currentUser;
+      if (!firebaseUser) {
+        throw new Error('Sign in before requesting a delivery quote.');
+      }
+
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch(environment.api.lalamoveQuoteApi, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          storeId,
+          pickupCoordinates,
+          destination: {
+            address: this.form.controls.shippingDetails.controls.address.value?.trim() || '',
+            coordinates: destinationCoordinates
+          }
+        })
+      });
+      const responseBody = await response.json() as { quote?: Omit<DeliveryQuote, 'receivedAt'>; error?: string };
+      if (!response.ok) {
+        throw new Error(responseBody.error || 'Could not retrieve a Lalamove delivery quote.');
+      }
+      if (!responseBody.quote ||
+          !responseBody.quote.quotationId ||
+          !Number.isFinite(responseBody.quote.fee) ||
+          !responseBody.quote.currency) {
+        throw new Error('Lalamove returned an invalid delivery quote.');
+      }
+      if (requestSequence !== this.quoteRequestSequence) {
+        return;
+      }
+
+      const quote: DeliveryQuote = { ...responseBody.quote, receivedAt: Date.now() };
+      this.deliveryQuote.set(quote);
+      this.deliveryQuoteExpired.set(false);
+      this.quotedRouteKey = routeKey;
+      if (this.quoteExpiryTimer !== undefined) {
+        window.clearTimeout(this.quoteExpiryTimer);
+      }
+      const expiry = quote.expiresAt ? Date.parse(quote.expiresAt) : Number.NaN;
+      const expiryTime = Number.isFinite(expiry) ? expiry : quote.receivedAt + 4 * 60 * 1000;
+      this.quoteExpiryTimer = window.setTimeout(
+        () => this.deliveryQuoteExpired.set(true),
+        Math.max(0, expiryTime - Date.now())
+      );
+    } catch (error) {
+      if (requestSequence !== this.quoteRequestSequence) {
+        return;
+      }
+      console.error('Lalamove sandbox delivery quote failed.', error);
+      this.deliveryQuoteError.set(error instanceof Error
+        ? error.message
+        : 'Could not retrieve a Lalamove delivery quote. Please try again.');
+    } finally {
+      if (requestSequence === this.quoteRequestSequence) {
+        this.deliveryQuoteLoading.set(false);
+      }
+    }
+  }
+
+  private coordinatesFromLocation(location: any): Coordinates | null {
+    const lat = typeof location?.lat === 'function' ? location.lat() : location?.lat;
+    const lng = typeof location?.lng === 'function' ? location.lng() : location?.lng;
+    if (typeof lat !== 'number' || typeof lng !== 'number' ||
+        !Number.isFinite(lat) || !Number.isFinite(lng) ||
+        lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return null;
+    }
+    return { lat, lng };
+  }
+
+  private async resolvePickupCoordinates(address: string): Promise<Coordinates> {
+    if (this.pickupCoordinates) {
+      return this.pickupCoordinates;
+    }
+    if (!this.googleMaps?.Geocoder) {
+      throw new Error('Google Maps could not locate the store. Check the Maps API key restrictions and Geocoding API.');
+    }
+
+    return new Promise((resolve, reject) => {
+      new this.googleMaps.Geocoder().geocode(
+        { address, componentRestrictions: { country: 'PH' } },
+        (results: any[], status: string) => {
+          const coordinates = this.coordinatesFromLocation(results?.[0]?.geometry?.location);
+          if (status !== 'OK' || !coordinates) {
+            reject(new Error('Google could not resolve the store pickup address. Check the store address and Maps API configuration.'));
+            return;
+          }
+          this.pickupCoordinates = coordinates;
+          resolve(coordinates);
+        }
+      );
+    });
+  }
+
   private geocodeTypedAddress(address: string, googleMaps: any): Promise<boolean> {
     if (!googleMaps?.Geocoder) {
       return Promise.resolve(false);
@@ -495,6 +792,14 @@ export class StorefrontCheckoutComponent implements AfterViewInit {
               return component?.long_name || '';
             };
             const location = result.geometry?.location;
+            const coordinates = this.coordinatesFromLocation(location);
+            if (!coordinates) {
+              this.ngZone.run(() => {
+                this.addressAutocompleteStatus.set('Google found the address but could not resolve its map location.');
+              });
+              resolve(false);
+              return;
+            }
             const barangay = getComponent(
               'sublocality_level_1',
               'administrative_area_level_4',
@@ -518,11 +823,15 @@ export class StorefrontCheckoutComponent implements AfterViewInit {
                 province: getComponent('administrative_area_level_1'),
                 postalCode: getComponent('postal_code')
               });
+              this.destinationCoordinates.set(coordinates);
               this.shippingAddressProvided.set(true);
               this.addressAutocompleteStatus.set(
                 barangay ? '' : 'Address found, but Google did not return a barangay. Please enter it manually.'
               );
             });
+            if (this.includeDeliveryFeeInPayment()) {
+              void this.requestLalamoveQuote();
+            }
             resolve(true);
           } catch (error) {
             console.error('Google geocoding for the entered checkout address failed.', error);
@@ -585,6 +894,12 @@ export class StorefrontCheckoutComponent implements AfterViewInit {
       return;
     }
 
+    if (this.includeDeliveryFeeInPayment() && !this.deliveryQuoteValid()) {
+      this.message.set('Get a valid Lalamove delivery quote before including the delivery fee in payment.');
+      this.isSuccess.set(false);
+      return;
+    }
+
     this.isSubmitting.set(true);
     this.message.set('');
 
@@ -605,6 +920,7 @@ export class StorefrontCheckoutComponent implements AfterViewInit {
       }
 
       const shippingDetails = this.form.controls.shippingDetails.getRawValue();
+      const deliveryQuote = this.deliveryQuoteValid() ? this.deliveryQuote() : null;
       const orderTotal = this.orderTotal();
       const order = {
         uid: user.uid,
@@ -621,11 +937,19 @@ export class StorefrontCheckoutComponent implements AfterViewInit {
         },
         items: snapshot.items,
         subtotal: snapshot.subtotal,
-        deliveryFee: this.deliveryFee,
+        deliveryFee: deliveryQuote?.fee || 0,
         deliveryFeeIncludedInPayment: this.includeDeliveryFeeInPayment(),
         payDeliveryUponArrival: !this.includeDeliveryFeeInPayment(),
+        deliveryQuote: deliveryQuote ? {
+          quotationId: deliveryQuote.quotationId,
+          expiresAt: deliveryQuote.expiresAt,
+          serviceType: deliveryQuote.serviceType,
+          environment: 'sandbox'
+        } : null,
         total: orderTotal,
-        currency: snapshot.currency,
+        currency: this.includeDeliveryFeeInPayment()
+          ? deliveryQuote?.currency || snapshot.currency
+          : snapshot.currency,
         storeId: snapshot.storeId,
         roleId: 'customer',
         status: 'REQUEST'

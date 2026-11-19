@@ -19,6 +19,7 @@ export interface AppEnvironment {
     baseUrl: string;
     ordersApi: string;
     directOrdersApi: string;
+    lalamoveQuoteApi: string;
   };
   inventory: {
     reconciliationMode: 'legacy' | 'recon';

@@ -22,6 +22,7 @@ export const environment = {
     ordersApi: "",
     // directOrdersApi intentionally disabled for Firestore-only Sales Summary
     directOrdersApi: "",
+    lalamoveQuoteApi: "https://asia-east1-jasperpos-1dfd5.cloudfunctions.net/lalamoveQuote",
     storefrontOrdersApi: "https://asia-east1-jasperpos-1dfd5.cloudfunctions.net/integrations/v1/storefront/orders",
   },
   inventory: {
