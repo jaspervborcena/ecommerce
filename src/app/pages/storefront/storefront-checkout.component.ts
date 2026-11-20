@@ -2,9 +2,10 @@ import { AfterViewInit, Component, computed, inject, NgZone, OnDestroy, OnInit, 
 import { CommonModule } from '@angular/common';
 import { Auth } from '@angular/fire/auth';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Firestore, doc, getDoc } from '@angular/fire/firestore';
+import { Firestore, collection, doc, getDoc, getDocs, query, where } from '@angular/fire/firestore';
 import { AuthService } from '../../services/auth.service';
 import { StorefrontCartService } from '../../services/storefront-cart.service';
+import { Branch } from '../../interfaces/branch.interface';
 import { Store } from '../../interfaces/store.interface';
 import { environment } from '../../../environments/environment';
 
@@ -49,6 +50,13 @@ interface CheckoutReviewSnapshot {
   includeDeliveryFee: boolean;
   total: number;
   currency: string;
+}
+
+interface StorePickupDetails {
+  storeName: string;
+  branchName: string;
+  address: string;
+  phoneNumber: string;
 }
 
 @Component({
@@ -200,7 +208,7 @@ interface CheckoutReviewSnapshot {
                     <div class="address-suggestions" role="listbox" aria-label="Address suggestions">
                       @for (suggestion of addressSuggestions(); track $index) {
                         <button type="button" class="address-suggestion" role="option"
-                          (pointerdown)="onAddressSuggestionPointerDown($event, suggestion)"
+                          (mousedown)="$event.preventDefault()"
                           (click)="selectAddressSuggestion(suggestion)"
                           (keydown.enter)="selectAddressSuggestion(suggestion); $event.preventDefault()"
                           (keydown.space)="selectAddressSuggestion(suggestion); $event.preventDefault()">
@@ -211,7 +219,7 @@ interface CheckoutReviewSnapshot {
                   }
                 </div>
                 @if (addressAutocompleteStatus()) {
-                  <p class="address-status" [class.error]="addressAutocompleteStatus().startsWith('Address search unavailable') || addressAutocompleteStatus().startsWith('Google address search failed')">{{ addressAutocompleteStatus() }}</p>
+                  <p class="address-status" [class.error]="addressAutocompleteStatus().startsWith('Address search unavailable') || addressAutocompleteStatus().startsWith('Google address search failed') || addressAutocompleteStatus().startsWith('Google could not find') || addressAutocompleteStatus().startsWith('Google found the address but could not')">{{ addressAutocompleteStatus() }}</p>
                 }
               </div>
             </div>
@@ -243,29 +251,27 @@ interface CheckoutReviewSnapshot {
               </div>
             </div>
             }
-            @if (shippingAddressProvided()) {
-              <div class="ship-from-details" aria-live="polite">
-                <h3 class="ship-from-title">Ship from</h3>
-                @if (storeDetailsLoading()) {
-                  <p class="ship-from-line">Loading store pickup details...</p>
-                } @else if (storeDetails()) {
-                  <p class="ship-from-line">
-                    <span class="ship-from-label">Store:</span> {{ storeDetails()?.storeName }}
-                  </p>
-                  <p class="ship-from-line">
-                    <span class="ship-from-label">Branch:</span> {{ storeDetails()?.branchName }}
-                  </p>
-                  <p class="ship-from-line">
-                    <span class="ship-from-label">Contact:</span> {{ storeDetails()?.phoneNumber }}
-                  </p>
-                  <p class="ship-from-line">
-                    <span class="ship-from-label">Pickup address:</span> {{ storeDetails()?.address }}
-                  </p>
-                } @else {
-                  <p class="ship-from-line" role="status">{{ storeDetailsError() }}</p>
-                }
-              </div>
-            }
+            <div class="ship-from-details" aria-live="polite">
+              <h3 class="ship-from-title">Ship from</h3>
+              @if (storeDetailsLoading()) {
+                <p class="ship-from-line">Loading store pickup details...</p>
+              } @else if (storeDetails()) {
+                <p class="ship-from-line">
+                  <span class="ship-from-label">Store:</span> {{ storeDetails()?.storeName }}
+                </p>
+                <p class="ship-from-line">
+                  <span class="ship-from-label">Branch:</span> {{ storeDetails()?.branchName }}
+                </p>
+                <p class="ship-from-line">
+                  <span class="ship-from-label">Contact:</span> {{ storeDetails()?.phoneNumber }}
+                </p>
+                <p class="ship-from-line">
+                  <span class="ship-from-label">Pickup address:</span> {{ storeDetails()?.address }}
+                </p>
+              } @else {
+                <p class="ship-from-line" role="status">{{ storeDetailsError() }}</p>
+              }
+            </div>
           </section>
 
           <section class="checkout-card customer-card" aria-labelledby="customer-details-title">
@@ -442,7 +448,7 @@ export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDes
   readonly isShippingAddressExpanded = signal(true);
   readonly addressAutocompleteStatus = signal('');
   readonly addressSuggestions = signal<any[]>([]);
-  readonly storeDetails = signal<Pick<Store, 'storeName' | 'branchName' | 'address' | 'phoneNumber'> | null>(null);
+  readonly storeDetails = signal<StorePickupDetails | null>(null);
   readonly storeDetailsLoading = signal(true);
   readonly storeDetailsError = signal('');
   readonly destinationCoordinates = signal<Coordinates | null>(null);
@@ -519,7 +525,8 @@ export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDes
   }
 
   private async fetchStoreDetails(): Promise<void> {
-    const storeId = this.cartService.getCartSnapshot().storeId;
+    const cartSnapshot = this.cartService.getCartSnapshot();
+    const storeId = cartSnapshot.storeId;
     if (!storeId) {
       this.storeDetailsError.set('Store details could not be found. Return to the storefront and try again.');
       this.storeDetailsLoading.set(false);
@@ -527,30 +534,110 @@ export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDes
     }
 
     try {
-      const storeSnapshot = await getDoc(doc(this.firestore, 'stores', storeId));
-      if (!storeSnapshot.exists()) {
-        this.storeDetailsError.set('Store details could not be found. Return to the storefront and try again.');
-        return;
+      const pickupUrl = new URL(environment.api.storefrontPickupApi);
+      pickupUrl.searchParams.set('storeId', storeId);
+      pickupUrl.searchParams.set('companyId', cartSnapshot.companyId || environment.companyId);
+      if (cartSnapshot.branchId) {
+        pickupUrl.searchParams.set('branchId', cartSnapshot.branchId);
       }
 
-      const store = storeSnapshot.data() as Partial<Store>;
-      if (!store.storeName || !store.branchName || !store.address || !store.phoneNumber) {
-        this.storeDetailsError.set('The store pickup details are incomplete. Please contact the store.');
-        return;
+      const response = await fetch(pickupUrl.toString());
+      const responseBody = await response.json() as {
+        pickup?: Partial<StorePickupDetails>;
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(responseBody.error || 'The selected pickup location could not be loaded.');
+      }
+
+      const pickup = responseBody.pickup;
+      const storeName = typeof pickup?.storeName === 'string' ? pickup.storeName.trim() : '';
+      const branchName = typeof pickup?.branchName === 'string' ? pickup.branchName.trim() : '';
+      const address = typeof pickup?.address === 'string' ? pickup.address.trim() : '';
+      if (!storeName || !branchName || !address) {
+        throw new Error('The selected store or branch has incomplete pickup details.');
       }
 
       this.storeDetails.set({
-        storeName: store.storeName,
-        branchName: store.branchName,
-        address: store.address,
-        phoneNumber: store.phoneNumber
+        storeName,
+        branchName,
+        address,
+        phoneNumber: typeof pickup?.phoneNumber === 'string' ? pickup.phoneNumber.trim() : ''
       });
     } catch (error) {
-      console.error('Failed to load store pickup details for checkout.', error);
-      this.storeDetailsError.set('Could not load the store pickup details. Please try again.');
+      console.warn('Pickup details API is unavailable; reading the selected store from Firestore.', error);
+      try {
+        this.storeDetails.set(await this.getStorePickupDetailsFromFirestore(
+          storeId,
+          cartSnapshot.companyId || environment.companyId,
+          cartSnapshot.branchId
+        ));
+        this.storeDetailsError.set('');
+      } catch (fallbackError) {
+        console.error('Failed to load store pickup details for checkout.', fallbackError);
+        const detail = fallbackError instanceof Error ? ` ${fallbackError.message}` : '';
+        this.storeDetailsError.set(`Could not load the selected store and branch pickup details.${detail}`);
+      }
     } finally {
       this.storeDetailsLoading.set(false);
     }
+  }
+
+  private async getStorePickupDetailsFromFirestore(
+    storeId: string,
+    companyId: string,
+    branchId?: string
+  ): Promise<StorePickupDetails> {
+    const stores = await getDocs(query(
+      collection(this.firestore, 'stores'),
+      where('companyId', '==', companyId)
+    ));
+    const storeSnapshot = stores.docs.find(document =>
+      document.id === storeId || document.data()['id'] === storeId
+    );
+    if (!storeSnapshot) {
+      throw new Error(`No store with ID "${storeId}" was found for company "${companyId}".`);
+    }
+
+    const store = storeSnapshot.data() as Partial<Store>;
+    let branchName = store.branchName?.trim() || '';
+    let address = store.address?.trim() || '';
+    let phoneNumber = store.phoneNumber?.trim() || '';
+
+    if (branchId) {
+      const branchSnapshot = await getDoc(doc(this.firestore, 'branches', branchId));
+      if (!branchSnapshot.exists()) {
+        throw new Error(`Selected branch "${branchId}" could not be found.`);
+      }
+      const branch = branchSnapshot.data() as Partial<Branch>;
+      if (branch.isActive !== true || branch.companyId !== companyId || branch.storeId !== storeSnapshot.id) {
+        throw new Error('The selected branch does not match the company store in this cart.');
+      }
+      branchName = branch.name?.trim() || branchName;
+      const branchAddress: unknown = branch.address;
+      const branchAddressObject = branchAddress && typeof branchAddress === 'object'
+        ? branchAddress as Record<string, unknown>
+        : null;
+      const formattedBranchAddress = typeof branchAddress === 'string'
+        ? branchAddress.trim()
+        : branchAddressObject
+          ? [
+              branchAddressObject['street'],
+              branchAddressObject['city'],
+              branchAddressObject['state'],
+              branchAddressObject['zipCode'],
+              branchAddressObject['country']
+            ].filter((part): part is string => typeof part === 'string' && part.trim().length > 0).join(', ')
+          : '';
+      address = formattedBranchAddress || address;
+      phoneNumber = branch.settings?.contactInfo?.phone?.trim() || phoneNumber;
+    }
+
+    const storeName = store.storeName?.trim() || '';
+    if (!storeName || !branchName || !address) {
+      throw new Error('The selected store or branch has incomplete pickup details.');
+    }
+    return { storeName, branchName, address, phoneNumber };
   }
 
   onAddressInput(event: Event): void {
@@ -568,7 +655,7 @@ export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDes
     this.deliveryQuoteLoading.set(false);
     this.quoteRequestSequence++;
     this.quotedRouteKey = '';
-    this.addressSuggestions.set([]);
+    this.ngZone.run(() => this.addressSuggestions.set([]));
     this.selectedAddressText = '';
     this.addressSearchSequence++;
 
@@ -603,14 +690,28 @@ export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDes
     }, 200);
   }
 
-  onAddressSuggestionPointerDown(event: PointerEvent, suggestion: any): void {
-    event.preventDefault();
-    void this.selectAddressSuggestion(suggestion);
-  }
-
   async selectAddressSuggestion(suggestion: any): Promise<void> {
     const prediction = suggestion?.placePrediction;
-    if (!prediction || !this.googleMaps || this.addressSelectionInProgress) {
+    const typedAddress = this.form.controls.shippingDetails.controls.address.value || '';
+    this.ngZone.run(() => this.addressSuggestions.set([]));
+    if (this.addressSelectionInProgress) {
+      return;
+    }
+    if (!prediction) {
+      this.ngZone.run(() => this.addressAutocompleteStatus.set('Could not read that address. Please choose another suggestion.'));
+      return;
+    }
+
+    // Show the selected result immediately, even if Google place details take time to load.
+    const predictionText = prediction.text?.toString() || suggestion?.label || '';
+    this.ngZone.run(() => {
+      this.form.controls.shippingDetails.controls.address.setValue(predictionText);
+      this.shippingAddressProvided.set(predictionText.trim().length > 0);
+      this.selectedAddressText = predictionText.trim();
+      this.addressAutocompleteStatus.set('Loading address details...');
+    });
+    if (!this.googleMaps) {
+      this.ngZone.run(() => this.addressAutocompleteStatus.set('Address selected. Enter the address parts manually.'));
       return;
     }
 
@@ -619,8 +720,6 @@ export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDes
       window.clearTimeout(this.addressSearchTimer);
     }
     this.addressSearchSequence++;
-    this.addressSuggestions.set([]);
-    this.addressAutocompleteStatus.set('Loading address details...');
     try {
       const place = prediction.toPlace();
       await place.fetchFields({ fields: ['addressComponents', 'formattedAddress', 'location'] });
@@ -649,7 +748,7 @@ export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDes
       this.ngZone.run(() => {
         this.form.controls.shippingDetails.patchValue({
           address: formattedAddress,
-          houseNumber: getComponent('street_number'),
+          houseNumber: getComponent('street_number') || typedAddress.match(/^\s*(\d+[A-Za-z]?(?:-\d+)?)/)?.[1] || '',
           street: getComponent('route'),
           barangay,
           city: getComponent('locality', 'administrative_area_level_2'),
@@ -742,7 +841,7 @@ export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDes
       const matchingSuggestions = (suggestions || [])
         .filter((item: any) => item.placePrediction)
         .map((item: any) => ({
-          ...item,
+          placePrediction: item.placePrediction,
           label: item.placePrediction.text?.toString() || ''
         }))
         .filter((item: any) => item.label);
@@ -766,20 +865,31 @@ export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDes
       return;
     }
 
-    const destinationCoordinates = this.destinationCoordinates();
-    if (!destinationCoordinates) {
-      this.deliveryQuoteError.set('Select a suggested address or finish entering the address to get a Lalamove quote.');
-      return;
-    }
-
     const requestSequence = ++this.quoteRequestSequence;
     this.deliveryQuoteLoading.set(true);
     this.deliveryQuoteError.set('');
 
     try {
+      let destinationCoordinates = this.destinationCoordinates();
+      if (!destinationCoordinates) {
+        const address = this.form.controls.shippingDetails.controls.address.value?.trim() || '';
+        const addressResolved = address
+          ? await this.geocodeTypedAddress(address, this.googleMaps)
+          : false;
+        if (!addressResolved) {
+          throw new Error('We could not find or verify this delivery address. Choose a suggested address or enter a correct address.');
+        }
+        destinationCoordinates = this.destinationCoordinates();
+      }
+      if (!destinationCoordinates) {
+        throw new Error('Google could not resolve the delivery address location. Choose a suggested address or enter a correct address.');
+      }
+
       await this.loadStoreDetails();
       const store = this.storeDetails();
-      const storeId = this.cartService.getCartSnapshot().storeId;
+      const cartSnapshot = this.cartService.getCartSnapshot();
+      const storeId = cartSnapshot.storeId;
+      const branchId = cartSnapshot.branchId || '';
       if (!store || !storeId) {
         throw new Error(this.storeDetailsError() || 'Store pickup details are unavailable.');
       }
@@ -791,6 +901,7 @@ export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDes
 
       const routeKey = [
         storeId,
+        branchId,
         pickupCoordinates.lat.toFixed(5),
         pickupCoordinates.lng.toFixed(5),
         destinationCoordinates.lat.toFixed(5),
@@ -807,21 +918,27 @@ export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDes
       }
 
       const token = await firebaseUser.getIdToken();
-      const response = await fetch(environment.api.lalamoveQuoteApi, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          storeId,
-          pickupCoordinates,
-          destination: {
-            address: this.form.controls.shippingDetails.controls.address.value?.trim() || '',
-            coordinates: destinationCoordinates
-          }
-        })
-      });
+      let response: Response;
+      try {
+        response = await fetch(environment.api.lalamoveQuoteApi, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            storeId,
+            branchId: branchId || null,
+            pickupCoordinates,
+            destination: {
+              address: this.form.controls.shippingDetails.controls.address.value?.trim() || '',
+              coordinates: destinationCoordinates
+            }
+          })
+        });
+      } catch {
+        throw new Error('The Lalamove quote service is unavailable. Its Cloud Function is not deployed or cannot be reached.');
+      }
       const responseBody = await response.json() as { quote?: Omit<DeliveryQuote, 'receivedAt'>; error?: string };
       if (!response.ok) {
         throw new Error(responseBody.error || 'Could not retrieve a Lalamove delivery quote.');
@@ -1055,16 +1172,10 @@ export class StorefrontCheckoutComponent implements AfterViewInit, OnInit, OnDes
 
     try {
       const snapshot = this.cartService.getCartSnapshot();
-      const storeSnapshot = await getDoc(doc(this.firestore, 'stores', snapshot.storeId));
-      if (!storeSnapshot.exists()) {
-        this.message.set('Store details could not be found. Please return to the storefront and try again.');
-        this.isSuccess.set(false);
-        return;
-      }
-
-      const store = storeSnapshot.data() as Partial<Store>;
-      if (!store.storeName || !store.branchName || !store.address || !store.phoneNumber) {
-        this.message.set('The store shipping details are incomplete. Please contact the store before continuing.');
+      await this.loadStoreDetails();
+      const store = this.storeDetails();
+      if (!store) {
+        this.message.set(this.storeDetailsError() || 'The selected store and branch pickup details are unavailable.');
         this.isSuccess.set(false);
         return;
       }

@@ -17,13 +17,11 @@ import { OfflineDocumentService } from '../core/services/offline-document.servic
 import { Company } from '../interfaces/company.interface';
 import { Branch } from '../interfaces/branch.interface';
 import { Store } from '../interfaces/store.interface';
-import { StorefrontPublicationService } from './storefront-publication.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class NewCompanyService {
-  private readonly storefrontPublication = inject(StorefrontPublicationService);
   private readonly companiesSignal = signal<Company[]>([]);
   private readonly companiesCollection = 'companies';
   private readonly storesCollection = 'stores';
@@ -118,7 +116,6 @@ export class NewCompanyService {
       };
       // 🔥 NEW APPROACH: Use OfflineDocumentService for offline-safe creation
       const storeId = await this.offlineDocService.createDocument(this.storesCollection, newStore);
-      await this.storefrontPublication.syncStore(storeId, newStore);
 
       // Handle branches if they exist (optional UI property)
       if (branches && Array.isArray(branches) && branches.length > 0) {
@@ -132,8 +129,7 @@ export class NewCompanyService {
             updatedAt: new Date()
           };
           // 🔥 NEW APPROACH: Use OfflineDocumentService for offline-safe creation
-          const branchId = await this.offlineDocService.createDocument(this.branchesCollection, newBranch);
-          await this.storefrontPublication.syncBranch(branchId, newBranch);
+          await this.offlineDocService.createDocument(this.branchesCollection, newBranch);
         }
       }
     }
@@ -193,15 +189,10 @@ export class NewCompanyService {
     const branchesSnapshot = await getDocs(branchesQuery);
     
     for (const branchDoc of branchesSnapshot.docs) {
-      await this.storefrontPublication.removeBranch(branchDoc.id);
       await this.offlineDocService.deleteDocument(this.branchesCollection, branchDoc.id);
     }
 
-    // Hide the public store before deleting its source document.
-    await this.storefrontPublication.removeStore(storeId);
-
-    // Then delete the store
-  await this.offlineDocService.deleteDocument(this.storesCollection, storeId);
+    await this.offlineDocService.deleteDocument(this.storesCollection, storeId);
   }
 
   // Public methods for store and branch creation
@@ -213,7 +204,6 @@ export class NewCompanyService {
     };
     // 🔥 NEW APPROACH: Use OfflineDocumentService for offline-safe creation
     const documentId = await this.offlineDocService.createDocument(this.storesCollection, newStore);
-    await this.storefrontPublication.syncStore(documentId, newStore);
     console.log('✅ Store created with ID:', documentId, navigator.onLine ? '(online)' : '(offline)');
     return documentId;
   }
@@ -231,7 +221,6 @@ export class NewCompanyService {
     };
     // 🔥 NEW APPROACH: Use OfflineDocumentService for offline-safe creation
     const documentId = await this.offlineDocService.createDocument(this.branchesCollection, newBranch);
-    await this.storefrontPublication.syncBranch(documentId, newBranch);
     console.log('✅ Branch created with ID:', documentId, navigator.onLine ? '(online)' : '(offline)');
     return documentId;
   }

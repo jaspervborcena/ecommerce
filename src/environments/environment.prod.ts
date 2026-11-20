@@ -24,6 +24,8 @@ export const environment = {
     directOrdersApi: "",
     lalamoveQuoteApi: "https://asia-east1-jasperpos-1dfd5.cloudfunctions.net/lalamoveQuote",
     storefrontOrdersApi: "https://asia-east1-jasperpos-1dfd5.cloudfunctions.net/integrations/v1/storefront/orders",
+    storefrontPickupApi: "https://us-central1-jasperpos-1dfd5.cloudfunctions.net/integrations/v1/storefront/pickup-details",
+    storefrontLocationsApi: "https://us-central1-jasperpos-1dfd5.cloudfunctions.net/integrations/v1/storefront/locations",
   },
   inventory: {
     // reconciliationMode: 'legacy' uses client-side FIFO; 'recon' defers to Cloud Function with tracking

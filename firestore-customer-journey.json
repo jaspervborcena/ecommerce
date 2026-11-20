@@ -14,7 +14,7 @@
     "notes": [
       "Create the owner Firebase Authentication account in the app first. Firestore fixtures cannot create Auth accounts or passwords.",
       "Replace the owner UID and email placeholders with the values from the account created in the app.",
-      "Branch documents are projected into storefront_branches for public browsing. Each branch's storeId links it to products in the products collection.",
+      "The storefront reads canonical stores, branches, and products through the integrations API; the API exposes only browse-safe product fields.",
       "The shopper in this fixture is a sample-only profile and cannot sign in; use a real shopper UID/email if you want a sign-in-capable customer.",
       "Public storefront documents contain only browse-safe fields; internal store and product documents remain private.",
       "To browse this sample company, open /branches?companyId=sample-company-001.",
@@ -101,16 +101,6 @@
       }
     },
     {
-      "path": "storefront_stores/journey-store-main",
-      "data": {
-        "companyId": "sample-company-001",
-        "storeName": "Harbor Coffee",
-        "branchName": "Main Branch",
-        "address": "10 Test Street, Manila",
-        "status": "active"
-      }
-    },
-    {
       "path": "branches/journey-branch-main",
       "data": {
         "uid": "{{OWNER_UID}}",
@@ -147,17 +137,6 @@
       }
     },
     {
-      "path": "storefront_branches/journey-branch-main",
-      "data": {
-        "companyId": "sample-company-001",
-        "storeId": "journey-store-main",
-        "name": "Main Branch",
-        "address": "10 Test Street, Manila, Metro Manila, 1000, Philippines",
-        "status": "active",
-        "storeHours": "09:00 - 18:00"
-      }
-    },
-    {
       "path": "stores/journey-store-north",
       "data": {
         "uid": "{{OWNER_UID}}",
@@ -186,16 +165,6 @@
         "subscriptionPopupShown": false,
         "createdAt": "2026-03-01T09:15:00.000Z",
         "updatedAt": "2026-03-01T09:15:00.000Z"
-      }
-    },
-    {
-      "path": "storefront_stores/journey-store-north",
-      "data": {
-        "companyId": "sample-company-001",
-        "storeName": "Harbor Coffee",
-        "branchName": "North Branch",
-        "address": "25 Test Avenue, Quezon City",
-        "status": "active"
       }
     },
     {
@@ -232,17 +201,6 @@
         },
         "createdAt": "2026-03-01T09:15:00.000Z",
         "updatedAt": "2026-03-01T09:15:00.000Z"
-      }
-    },
-    {
-      "path": "storefront_branches/journey-branch-north",
-      "data": {
-        "companyId": "sample-company-001",
-        "storeId": "journey-store-north",
-        "name": "North Branch",
-        "address": "25 Test Avenue, Quezon City, Metro Manila, 1100, Philippines",
-        "status": "active",
-        "storeHours": "10:00 - 19:00"
       }
     },
     {
@@ -287,20 +245,6 @@
       }
     },
     {
-      "path": "storefront_products/journey-product-coffee",
-      "data": {
-        "storeId": "journey-store-main",
-        "productName": "House Blend Coffee",
-        "sellingPrice": 320,
-        "status": "active",
-        "description": "Freshly roasted house blend.",
-        "skuId": "HBC-001",
-        "category": "Beverages",
-        "unitType": "packs",
-        "currency": "PHP"
-      }
-    },
-    {
       "path": "products/journey-product-water",
       "data": {
         "uid": "{{OWNER_UID}}",
@@ -330,20 +274,6 @@
       }
     },
     {
-      "path": "storefront_products/journey-product-water",
-      "data": {
-        "storeId": "journey-store-main",
-        "productName": "Bottled Water",
-        "sellingPrice": 18,
-        "status": "active",
-        "description": "500 ml bottled water.",
-        "skuId": "BW-002",
-        "category": "Beverages",
-        "unitType": "bottles",
-        "currency": "PHP"
-      }
-    },
-    {
       "path": "products/journey-product-north-special",
       "data": {
         "uid": "{{OWNER_UID}}",
@@ -370,20 +300,6 @@
         "createdAt": "2026-03-01T09:45:00.000Z",
         "updatedAt": "2026-03-01T09:45:00.000Z",
         "lastUpdated": "2026-03-01T09:45:00.000Z"
-      }
-    },
-    {
-      "path": "storefront_products/journey-product-north-special",
-      "data": {
-        "storeId": "journey-store-north",
-        "productName": "North Branch Special",
-        "sellingPrice": 180,
-        "status": "active",
-        "description": "A product available at the North Branch.",
-        "skuId": "NBS-003",
-        "category": "Specials",
-        "unitType": "pieces",
-        "currency": "PHP"
       }
     },
     {

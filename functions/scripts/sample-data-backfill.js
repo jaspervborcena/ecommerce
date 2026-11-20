@@ -43,9 +43,6 @@ export const SAMPLE_COLLECTIONS = [
   'systemConfig',
   'test',
   'storefront_companies',
-  'storefront_branches',
-  'storefront_products',
-  'storefront_stores',
   'userRoles',
   'users'
 ];
@@ -170,38 +167,6 @@ function createSupplementalCollections() {
       items: [{ productId: productId(index), quantity: 1 }]
     });
 
-    collections.storefront_stores = collections.storefront_stores || [];
-    collections.storefront_stores.push({
-      companyId: companyId(index),
-      storeName: ['Sample Main Store', 'Sample North Store', 'Sample South Store'][index],
-      branchName: ['Main Branch', 'North Branch', 'South Branch'][index],
-      address: `${index + 1} Sample Street, Manila`,
-      status: 'active'
-    });
-
-    collections.storefront_branches = collections.storefront_branches || [];
-    collections.storefront_branches.push({
-      companyId: companyId(index),
-      storeId: storeId(index),
-      name: ['Main Branch', 'North Branch', 'South Branch'][index],
-      address: `${index + 1} Sample Street, Manila`,
-      status: 'active',
-      storeHours: '09:00 - 18:00'
-    });
-
-    collections.storefront_products = collections.storefront_products || [];
-    collections.storefront_products.push({
-      storeId: storeId(index),
-      productName: ['Arabica Coffee', 'Bottled Water', 'Gift Wrapping'][index],
-      sellingPrice: [320, 18, 50][index],
-      status: 'active',
-      description: ['Medium roast beans', '500 ml purified water', 'Gift wrapping service'][index],
-      skuId: ['COF-001', 'DRK-002', 'SVC-003'][index],
-      category: ['Beverages', 'Beverages', 'Services'][index],
-      unitType: ['packs', 'bottles', 'units'][index],
-      currency: 'PHP'
-    });
-
     collections.storefront_companies = collections.storefront_companies || [];
     collections.storefront_companies.push({
       companyId: companyId(index),
@@ -243,9 +208,6 @@ function documentId(collectionName, record, index) {
     case 'roledefinition': return record.roleId || sampleId('role', index);
     case 'stores': return storeId(index);
     case 'storefront_companies': return record.slug || companyId(index);
-    case 'storefront_branches': return branchId(index);
-    case 'storefront_products': return productId(index);
-    case 'storefront_stores': return storeId(index);
     case 'users': return userId(index);
     case 'userRoles': return sampleId('user-role', index);
     default: return sampleId(collectionName.replace(/[^a-zA-Z0-9]+/g, '-'), index);
@@ -263,19 +225,6 @@ function linkRecord(collectionName, record, index) {
   if (collectionName === 'storefront_companies') {
     linked.companyId = company;
     linked.slug = company;
-    return linked;
-  }
-  if (collectionName === 'storefront_branches') {
-    linked.companyId = company;
-    linked.storeId = store;
-    return linked;
-  }
-  if (collectionName === 'storefront_products') {
-    linked.storeId = store;
-    return linked;
-  }
-  if (collectionName === 'storefront_stores') {
-    linked.companyId = company;
     return linked;
   }
 

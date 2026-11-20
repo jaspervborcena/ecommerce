@@ -74,13 +74,9 @@ service cloud.firestore {
 
     // ===== MAIN COLLECTIONS WITH UID SECURITY =====
     
-    // Products Collection - UID-based security
+    // Active product documents are public; writes remain UID-owned.
     match /products/{productId} {
-      // Allow read if user is authenticated AND either:
-      // 1. Product has no uid field (legacy data), OR
-      // 2. Product's uid matches the authenticated user's uid
-      allow read: if isAuthenticated() && 
-                  (!('uid' in resource.data) || resource.data.uid == request.auth.uid);
+      allow read: if resource.data.status == 'active';
       
       // Allow create if user is authenticated and sets their own uid
       allow create: if isAuthenticated() && 

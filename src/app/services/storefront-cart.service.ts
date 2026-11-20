@@ -24,6 +24,8 @@ export interface StorefrontCartSnapshot {
   subtotal: number;
   total: number;
   storeId: string;
+  branchId?: string;
+  companyId?: string;
   currency: string;
 }
 
@@ -43,17 +45,30 @@ export class StorefrontCartService {
     return this.cart();
   }
 
-  setActiveStore(storeId: string, currency = 'PHP'): void {
+  setActiveStore(
+    storeId: string,
+    currency = 'PHP',
+    branchId?: string | null,
+    companyId?: string | null
+  ): void {
     const normalizedStoreId = storeId?.trim();
     if (!normalizedStoreId) {
       return;
     }
 
     const current = this.cart();
+    const activeBranchId = branchId === undefined
+      ? current.storeId === normalizedStoreId ? current.branchId : undefined
+      : branchId?.trim() || undefined;
+    const activeCompanyId = companyId === undefined
+      ? current.storeId === normalizedStoreId ? current.companyId : undefined
+      : companyId?.trim() || undefined;
     const next = this.buildSnapshot(
       current.items,
       normalizedStoreId,
-      currency || current.currency || 'PHP'
+      currency || current.currency || 'PHP',
+      activeBranchId,
+      activeCompanyId
     );
     this.cart.set(next);
     this.persist(next);
@@ -78,7 +93,9 @@ export class StorefrontCartService {
 
     const nextStore = product.storeId || current.storeId || 'demo-store';
     const nextCurrency = product.currency || current.currency || 'PHP';
-    const next = this.buildSnapshot(nextItems, nextStore, nextCurrency);
+    const nextBranchId = nextStore === current.storeId ? current.branchId : undefined;
+    const nextCompanyId = nextStore === current.storeId ? current.companyId : undefined;
+    const next = this.buildSnapshot(nextItems, nextStore, nextCurrency, nextBranchId, nextCompanyId);
     this.cart.set(next);
     this.persist(next);
   }
@@ -86,7 +103,7 @@ export class StorefrontCartService {
   removeItem(productId: string): void {
     const current = this.cart();
     const nextItems = current.items.filter(item => item.productId !== productId);
-    const next = this.buildSnapshot(nextItems, current.storeId, current.currency);
+    const next = this.buildSnapshot(nextItems, current.storeId, current.currency, current.branchId, current.companyId);
     this.cart.set(next);
     this.persist(next);
   }
@@ -101,25 +118,39 @@ export class StorefrontCartService {
     const nextItems = current.items.map(item => item.productId === productId
       ? { ...item, quantity, subtotal: item.price * quantity }
       : item);
-    const next = this.buildSnapshot(nextItems, current.storeId, current.currency);
+    const next = this.buildSnapshot(nextItems, current.storeId, current.currency, current.branchId, current.companyId);
     this.cart.set(next);
     this.persist(next);
   }
 
   clear(): void {
     const current = this.cart();
-    const empty = this.buildSnapshot([], current.storeId || 'demo-store', current.currency || 'PHP');
+    const empty = this.buildSnapshot(
+      [],
+      current.storeId || 'demo-store',
+      current.currency || 'PHP',
+      current.branchId,
+      current.companyId
+    );
     this.cart.set(empty);
     this.persist(empty);
   }
 
-  private buildSnapshot(items: StorefrontCartItem[], storeId: string, currency: string): StorefrontCartSnapshot {
+  private buildSnapshot(
+    items: StorefrontCartItem[],
+    storeId: string,
+    currency: string,
+    branchId?: string,
+    companyId?: string
+  ): StorefrontCartSnapshot {
     const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
     return {
       items,
       subtotal,
       total: subtotal,
       storeId,
+      ...(branchId ? { branchId } : {}),
+      ...(companyId ? { companyId } : {}),
       currency
     };
   }
@@ -135,7 +166,13 @@ export class StorefrontCartService {
         return this.buildSnapshot([], 'demo-store', 'PHP');
       }
       const parsed = JSON.parse(raw) as StorefrontCartSnapshot;
-      return this.buildSnapshot(parsed.items || [], parsed.storeId || 'demo-store', parsed.currency || 'PHP');
+      return this.buildSnapshot(
+        parsed.items || [],
+        parsed.storeId || 'demo-store',
+        parsed.currency || 'PHP',
+        typeof parsed.branchId === 'string' ? parsed.branchId : undefined,
+        typeof parsed.companyId === 'string' ? parsed.companyId : undefined
+      );
     } catch {
       return this.buildSnapshot([], 'demo-store', 'PHP');
     }

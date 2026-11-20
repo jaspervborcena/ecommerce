@@ -20,6 +20,9 @@ export interface AppEnvironment {
     ordersApi: string;
     directOrdersApi: string;
     lalamoveQuoteApi: string;
+    storefrontOrdersApi: string;
+    storefrontPickupApi: string;
+    storefrontLocationsApi: string;
   };
   inventory: {
     reconciliationMode: 'legacy' | 'recon';

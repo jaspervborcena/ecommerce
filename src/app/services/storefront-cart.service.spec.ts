@@ -50,4 +50,22 @@ describe('StorefrontCartService', () => {
     expect(cart.storeId).toBe('store-42');
     expect(cart.currency).toBe('USD');
   });
+
+  it('preserves the selected branch with the cart and clears it when switching stores', () => {
+    service.setActiveStore('store-1', 'PHP', 'branch-7', 'company-1');
+    service.addItem({
+      id: 'p1',
+      productName: 'Coffee',
+      sellingPrice: 120,
+      currency: 'PHP',
+      storeId: 'store-1'
+    });
+
+    expect(service.getCartSnapshot().branchId).toBe('branch-7');
+    expect(service.getCartSnapshot().companyId).toBe('company-1');
+
+    service.setActiveStore('store-2');
+    expect(service.getCartSnapshot().branchId).toBeUndefined();
+    expect(service.getCartSnapshot().companyId).toBeUndefined();
+  });
 });

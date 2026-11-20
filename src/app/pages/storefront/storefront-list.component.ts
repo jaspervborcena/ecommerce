@@ -1,10 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Firestore, collection, doc, getDoc, query, where, getDocs } from '@angular/fire/firestore';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Firestore, collection, getDocs, query, where } from '@angular/fire/firestore';
 import { StorefrontCartService } from '../../services/storefront-cart.service';
-import { PublicStorefrontStore } from '../../services/storefront-publication.service';
 import { AuthService } from '../../services/auth.service';
+import { environment } from '../../../environments/environment';
+import { StorefrontProduct } from '../../interfaces/storefront-product.interface';
 
 @Component({
   selector: 'app-storefront-list',
@@ -52,7 +53,10 @@ import { AuthService } from '../../services/auth.service';
         </div>
       </div>
 
-      <div *ngIf="!isLoading() && products().length === 0" class="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center text-slate-600">
+      <div *ngIf="!isLoading() && loadError()" class="rounded-3xl border border-dashed border-rose-300 bg-rose-50 p-10 text-center text-rose-700">
+        {{ loadError() }}
+      </div>
+      <div *ngIf="!isLoading() && !loadError() && products().length === 0" class="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center text-slate-600">
         No products found for this storefront.
       </div>
 
@@ -90,12 +94,12 @@ import { AuthService } from '../../services/auth.service';
   `
 })
 export class StorefrontListComponent {
-  private firestore = inject(Firestore);
   private route = inject(ActivatedRoute);
   private cartService = inject(StorefrontCartService);
   private authService = inject(AuthService);
+  private firestore = inject(Firestore);
 
-  products = signal<any[]>([]);
+  products = signal<StorefrontProduct[]>([]);
   canManageOrders = computed(() =>
     ['creator', 'store_manager', 'manager', 'cashier', 'attendant'].includes(
       this.authService.getCurrentPermission()?.roleId || ''
@@ -104,6 +108,7 @@ export class StorefrontListComponent {
   storeName = signal('Storefront');
   branchName = signal('');
   isLoading = signal<boolean>(true);
+  loadError = signal('');
   feedback = signal<string>('');
   itemCount = this.cartService.itemCount;
 
@@ -115,48 +120,77 @@ export class StorefrontListComponent {
     try {
       this.isLoading.set(true);
       const storeId = this.route.snapshot.paramMap.get('storeId') || '';
-      this.cartService.setActiveStore(storeId);
-      await this.loadStoreDetails(storeId);
-      const productsRef = collection(this.firestore, 'storefront_products');
-      const q = query(productsRef, where('storeId', '==', storeId), where('status', '==', 'active'));
-      const snap = await getDocs(q as any);
-      const items: any[] = [];
-      snap.forEach(d => items.push({ id: d.id, ...(d.data() as any) }));
-      this.products.set(items);
+      if (!storeId) {
+        throw new Error('The selected store is missing.');
+      }
+      const branchId = this.route.snapshot.queryParamMap.has('branchId')
+        ? this.route.snapshot.queryParamMap.get('branchId')
+        : undefined;
+      const companyId = this.route.snapshot.queryParamMap.get('companyId') ||
+        this.cartService.getCartSnapshot().companyId ||
+        environment.companyId;
+      this.cartService.setActiveStore(storeId, 'PHP', branchId, companyId);
+      await this.loadStoreDetails(storeId, companyId, branchId || this.cartService.getCartSnapshot().branchId);
+
+      const productsSnapshot = await getDocs(query(
+        collection(this.firestore, 'products'),
+        where('storeId', '==', storeId),
+        where('status', '==', 'active')
+      ));
+      this.products.set(productsSnapshot.docs.flatMap(productDocument => {
+        const product = productDocument.data();
+        if (typeof product['productName'] !== 'string' ||
+            typeof product['sellingPrice'] !== 'number' ||
+            !Number.isFinite(product['sellingPrice'])) {
+          return [];
+        }
+        return [{
+          id: productDocument.id,
+          storeId,
+          productName: product['productName'],
+          sellingPrice: product['sellingPrice'],
+          currency: typeof product['currency'] === 'string' ? product['currency'] : 'PHP',
+          imageUrl: typeof product['imageUrl'] === 'string' ? product['imageUrl'] : undefined,
+          shortDescription: typeof product['shortDescription'] === 'string' ? product['shortDescription'] : undefined,
+          description: typeof product['description'] === 'string' ? product['description'] : undefined,
+          skuId: typeof product['skuId'] === 'string' ? product['skuId'] : undefined,
+          category: typeof product['category'] === 'string' ? product['category'] : undefined
+        }];
+      }));
     } catch (err) {
       console.error('Storefront load error', err);
       this.products.set([]);
+      this.loadError.set(err instanceof Error ? err.message : 'Products could not be loaded. Please try again.');
     } finally {
       this.isLoading.set(false);
     }
   }
 
-  private async loadStoreDetails(storeId: string): Promise<void> {
-    if (!storeId) {
-      return;
+  private async loadStoreDetails(storeId: string, companyId: string, branchId?: string): Promise<void> {
+    const pickupUrl = new URL(environment.api.storefrontPickupApi);
+    pickupUrl.searchParams.set('storeId', storeId);
+    pickupUrl.searchParams.set('companyId', companyId);
+    if (branchId) {
+      pickupUrl.searchParams.set('branchId', branchId);
+    }
+    const response = await fetch(pickupUrl.toString());
+    const responseBody = await response.json() as {
+      pickup?: { storeName?: string; branchName?: string };
+      error?: string;
+    };
+    if (!response.ok) {
+      throw new Error(responseBody.error || 'Store details could not be loaded.');
     }
 
-    try {
-      const storeSnapshot = await getDoc(doc(this.firestore, 'storefront_stores', storeId));
-      if (!storeSnapshot.exists()) {
-        return;
-      }
-
-      const store = storeSnapshot.data() as Partial<PublicStorefrontStore>;
-      if (store.status === 'active') {
-        if (typeof store.storeName === 'string' && store.storeName.trim()) {
-          this.storeName.set(store.storeName);
-        }
-        if (typeof store.branchName === 'string') {
-          this.branchName.set(store.branchName);
-        }
-      }
-    } catch (error) {
-      console.error('Storefront store details load error', error);
+    const pickup = responseBody.pickup;
+    if (!pickup?.storeName || !pickup.branchName) {
+      throw new Error('The selected store or branch has incomplete details.');
     }
+    this.storeName.set(pickup.storeName);
+    this.branchName.set(pickup.branchName);
   }
 
-  addToCart(product: any): void {
+  addToCart(product: StorefrontProduct): void {
     this.cartService.addItem({
       id: product.id,
       productName: product.productName,

@@ -15,7 +15,6 @@ import {
   DocumentReference
 } from '@angular/fire/firestore';
 import { Company } from '../interfaces/company.interface';
-import { Branch } from '../interfaces/branch.interface';
 import { Store } from '../interfaces/store.interface';
 import { AuthService } from './auth.service';
 import { FirestoreSecurityService } from '../core/services/firestore-security.service';
@@ -114,38 +113,6 @@ export class CompanyService {
     return companies[0];
   }
 
-  async refreshStorefrontBranches(companyId: string): Promise<void> {
-    const user = this.authService.getCurrentUser();
-    if (!user || !companyId) {
-      return;
-    }
-
-    const branchesRef = collection(this.firestore, 'branches');
-    const ownedBranches = await getDocs(query(branchesRef, where('uid', '==', user.uid)));
-    for (const branchDoc of ownedBranches.docs) {
-      const branch = branchDoc.data() as Partial<Branch>;
-      if (branch.companyId === companyId) {
-        await this.storefrontPublication.syncBranch(branchDoc.id, branch);
-      }
-    }
-  }
-
-  async refreshStorefrontStores(companyId: string): Promise<void> {
-    const user = this.authService.getCurrentUser();
-    if (!user || !companyId) {
-      return;
-    }
-
-    const storesRef = collection(this.firestore, 'stores');
-    const ownedStores = await getDocs(query(storesRef, where('uid', '==', user.uid)));
-    for (const storeDoc of ownedStores.docs) {
-      const store = storeDoc.data() as Partial<Store>;
-      if (store.companyId === companyId) {
-        await this.storefrontPublication.syncStore(storeDoc.id, store);
-      }
-    }
-  }
-
   async loadCompanies() {
     try {
       const user = this.authService.getCurrentUser();
@@ -198,16 +165,6 @@ export class CompanyService {
                 await this.storefrontPublication.syncCompany(companyDoc.id, company);
               } catch (publicationError) {
                 console.warn('CompanyService: Could not refresh the public company lookup.', publicationError);
-              }
-              try {
-                await this.refreshStorefrontBranches(companyDoc.id);
-              } catch (branchPublicationError) {
-                console.warn('CompanyService: Could not refresh public branch listings.', branchPublicationError);
-              }
-              try {
-                await this.refreshStorefrontStores(companyDoc.id);
-              } catch (storePublicationError) {
-                console.warn('CompanyService: Could not refresh public store listings.', storePublicationError);
               }
             }
 
@@ -443,7 +400,6 @@ export class CompanyService {
       };
       // 🔥 NEW APPROACH: Use OfflineDocumentService for offline-safe creation
       const storeId = await this.offlineDocService.createDocument('stores', newStore);
-      await this.storefrontPublication.syncStore(storeId, newStore);
 
       // Handle branches if they exist (optional UI property)
       const branches = (store as any).branches;
@@ -458,8 +414,7 @@ export class CompanyService {
             updatedAt: new Date()
           };
           // 🔥 NEW APPROACH: Use OfflineDocumentService for offline-safe creation
-          const branchId = await this.offlineDocService.createDocument('branches', newBranch);
-          await this.storefrontPublication.syncBranch(branchId, newBranch);
+          await this.offlineDocService.createDocument('branches', newBranch);
         }
       }
     }

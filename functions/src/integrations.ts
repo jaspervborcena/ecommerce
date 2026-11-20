@@ -72,8 +72,8 @@ function sendStorefrontOrdersApiError(res: express.Response, error: unknown): vo
     return;
   }
 
-  console.error('Storefront orders API failed.', error);
-  res.status(500).json({ error: 'Could not process the storefront order request.' });
+  console.error('Storefront API failed.', error);
+  res.status(500).json({ error: 'Could not process the storefront request.' });
 }
 
 function toIsoDate(value: unknown): string | null {
@@ -85,6 +85,234 @@ function toIsoDate(value: unknown): string | null {
   }
   return typeof value === 'string' ? value : null;
 }
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? value as Record<string, unknown> : {};
+}
+
+function nonEmptyString(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function formatBranchAddress(value: unknown): string {
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+  const address = asRecord(value);
+  return ['street', 'city', 'state', 'zipCode', 'country']
+    .map(field => nonEmptyString(address[field]))
+    .filter(Boolean)
+    .join(', ');
+}
+
+async function findActiveStore(storeId: string, companyId: string) {
+  const stores = await db.collection('stores')
+    .where('companyId', '==', companyId)
+    .get();
+  return stores.docs.find(document =>
+    (document.id === storeId || document.data()['id'] === storeId) &&
+    document.data()['status'] === 'active'
+  ) || null;
+}
+
+function toPublicStorefrontProduct(
+  productId: string,
+  product: Record<string, unknown>,
+  storeId: string,
+  companyId: string
+): Record<string, unknown> | null {
+  const productStoreId = nonEmptyString(product['storeId']);
+  const productCompanyId = nonEmptyString(product['companyId']);
+  const productName = nonEmptyString(product['productName']);
+  const sellingPrice = product['sellingPrice'];
+  if (product['status'] !== 'active' ||
+      productStoreId !== storeId ||
+      (productCompanyId && productCompanyId !== companyId) ||
+      !productName ||
+      typeof sellingPrice !== 'number' ||
+      !Number.isFinite(sellingPrice)) {
+    return null;
+  }
+
+  const publicProduct: Record<string, unknown> = {
+    id: productId,
+    storeId,
+    productName,
+    sellingPrice,
+    currency: nonEmptyString(product['currency']) || 'PHP'
+  };
+  for (const field of ['shortDescription', 'description', 'skuId', 'category', 'unitType', 'imageUrl']) {
+    const value = product[field];
+    if (typeof value === 'string' && value.trim()) {
+      publicProduct[field] = value.trim();
+    }
+  }
+  return publicProduct;
+}
+
+app.get('/v1/storefront/locations', async (req, res) => {
+  const companyId = typeof req.query['companyId'] === 'string' ? req.query['companyId'].trim() : '';
+  if (!companyId || companyId.length > 128) {
+    res.status(400).json({ error: 'A valid companyId is required.' });
+    return;
+  }
+
+  try {
+    const storesSnapshot = await db.collection('stores')
+      .where('companyId', '==', companyId)
+      .get();
+    res.json({
+      locations: storesSnapshot.docs
+        .filter(document => document.data()['status'] === 'active')
+        .map(document => {
+          const store = document.data();
+          return {
+            id: document.id,
+            companyId,
+            storeId: document.id,
+            branchName: nonEmptyString(store['branchName']) || nonEmptyString(store['storeName']),
+            address: nonEmptyString(store['address']),
+            status: 'active',
+            storeHours: nonEmptyString(store['storeHours']) || 'Hours not listed'
+          };
+        })
+        .filter(location => location.branchName)
+    });
+  } catch (error) {
+    sendStorefrontOrdersApiError(res, error);
+  }
+});
+
+app.get('/v1/storefront/products', async (req, res) => {
+  const storeId = typeof req.query['storeId'] === 'string' ? req.query['storeId'].trim() : '';
+  const companyId = typeof req.query['companyId'] === 'string' ? req.query['companyId'].trim() : '';
+  if (!storeId || !companyId || storeId.length > 128 || companyId.length > 128) {
+    res.status(400).json({ error: 'Valid storeId and companyId are required.' });
+    return;
+  }
+
+  try {
+    const store = await findActiveStore(storeId, companyId);
+    if (!store) {
+      throw new StorefrontOrdersApiError(404, 'The selected store is unavailable.');
+    }
+    const products = await db.collection('products')
+      .where('storeId', '==', storeId)
+      .get();
+    res.json({
+      products: products.docs
+        .map(document => toPublicStorefrontProduct(document.id, document.data(), storeId, companyId))
+        .filter((product): product is Record<string, unknown> => product !== null)
+    });
+  } catch (error) {
+    sendStorefrontOrdersApiError(res, error);
+  }
+});
+
+app.get('/v1/storefront/products/:productId', async (req, res) => {
+  const productId = req.params['productId'].trim();
+  const companyId = typeof req.query['companyId'] === 'string' ? req.query['companyId'].trim() : '';
+  if (!productId || productId.length > 128 || !companyId || companyId.length > 128) {
+    res.status(400).json({ error: 'Valid productId and companyId are required.' });
+    return;
+  }
+
+  try {
+    const productSnapshot = await db.collection('products').doc(productId).get();
+    if (!productSnapshot.exists) {
+      throw new StorefrontOrdersApiError(404, 'Product not found.');
+    }
+    const product = productSnapshot.data() || {};
+    const storeId = nonEmptyString(product['storeId']);
+    const store = storeId ? await findActiveStore(storeId, companyId) : null;
+    if (!store) {
+      throw new StorefrontOrdersApiError(404, 'Product not found for this storefront.');
+    }
+    const publicProduct = toPublicStorefrontProduct(productSnapshot.id, product, storeId, companyId);
+    if (!publicProduct) {
+      throw new StorefrontOrdersApiError(404, 'Product is not available.');
+    }
+    res.json({ product: publicProduct });
+  } catch (error) {
+    sendStorefrontOrdersApiError(res, error);
+  }
+});
+
+app.get('/v1/storefront/pickup-details', async (req, res) => {
+  const storeId = typeof req.query['storeId'] === 'string' ? req.query['storeId'].trim() : '';
+  const branchId = typeof req.query['branchId'] === 'string' ? req.query['branchId'].trim() : '';
+  const requestedCompanyId = typeof req.query['companyId'] === 'string' ? req.query['companyId'].trim() : '';
+  if ((!storeId && !branchId) || storeId.length > 128 || branchId.length > 128 || requestedCompanyId.length > 128) {
+    res.status(400).json({ error: 'A valid companyId, storeId, or branchId is required.' });
+    return;
+  }
+
+  try {
+    let branch: Record<string, unknown> | null = null;
+    let resolvedStoreId = storeId;
+    let companyId = requestedCompanyId;
+
+    if (branchId) {
+      const branchSnapshot = await db.collection('branches').doc(branchId).get();
+      branch = branchSnapshot.data() || {};
+      if (!branchSnapshot.exists || branch['isActive'] !== true) {
+        throw new StorefrontOrdersApiError(404, 'The selected branch is unavailable.');
+      }
+
+      const branchStoreId = nonEmptyString(branch['storeId']);
+      const branchCompanyId = nonEmptyString(branch['companyId']);
+      if ((storeId && storeId !== branchStoreId) ||
+          (companyId && companyId !== branchCompanyId) ||
+          !branchStoreId ||
+          !branchCompanyId) {
+        throw new StorefrontOrdersApiError(404, 'The selected branch is unavailable for this store.');
+      }
+      resolvedStoreId = branchStoreId;
+      companyId = branchCompanyId;
+    }
+
+    if (!companyId || !resolvedStoreId) {
+      throw new StorefrontOrdersApiError(400, 'A companyId and selected store are required.');
+    }
+
+    const storeSnapshot = await findActiveStore(resolvedStoreId, companyId);
+    if (!storeSnapshot) {
+      throw new StorefrontOrdersApiError(404, 'The selected store is unavailable.');
+    }
+
+    const store = storeSnapshot.data() || {};
+    let branchName = nonEmptyString(store['branchName']);
+    let address = nonEmptyString(store['address']);
+    let phoneNumber = nonEmptyString(store['phoneNumber']);
+
+    if (branch) {
+      const settings = asRecord(branch['settings']);
+      const contactInfo = asRecord(settings['contactInfo']);
+      branchName = nonEmptyString(branch['name']);
+      address = formatBranchAddress(branch['address']);
+      phoneNumber = nonEmptyString(contactInfo['phone']) ||
+        nonEmptyString(branch['phoneNumber']) ||
+        phoneNumber;
+    }
+
+    const storeName = nonEmptyString(store['storeName']);
+    if (!storeName || !branchName || !address) {
+      throw new StorefrontOrdersApiError(422, 'The selected store or branch has incomplete pickup details.');
+    }
+
+    res.json({
+      pickup: {
+        storeName,
+        branchName,
+        address,
+        phoneNumber,
+        branchId: branchId || null
+      }
+    });
+  } catch (error) {
+    sendStorefrontOrdersApiError(res, error);
+  }
+});
 
 app.get('/v1/storefront/orders', async (req, res) => {
   const uid = await getAuthenticatedUid(req, res);

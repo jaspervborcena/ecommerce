@@ -1,16 +1,9 @@
-import { Component, OnInit, inject, signal, Injector } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Firestore, collection, getDocs, query, where } from '@angular/fire/firestore';
 import { environment } from '../../../../environments/environment';
-import { runInInjectionContext } from '@angular/core';
 import { StoreSelectionService } from '../../../services/store-selection.service';
-import {
-  PublicStorefrontBranch,
-  PublicStorefrontStore,
-  StorefrontPublicationService
-} from '../../../services/storefront-publication.service';
-import { CompanyService } from '../../../services/company.service';
+import { StorefrontPublicationService } from '../../../services/storefront-publication.service';
 
 @Component({
   selector: 'app-branches',
@@ -37,6 +30,11 @@ import { CompanyService } from '../../../services/company.service';
       @if (isLoading()) {
         <div class="loading-state">
           <p>Loading branches...</p>
+        </div>
+      } @else if (loadError()) {
+        <div class="empty-state">
+          <p class="empty-state-title">Could not load branches.</p>
+          <p class="empty-state-text">{{ loadError() }}</p>
         </div>
       } @else if (availableLocations().length === 0) {
         <div class="empty-state">
@@ -80,14 +78,13 @@ import { CompanyService } from '../../../services/company.service';
 export class BranchesComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
-  private firestore = inject(Firestore);
-  private injector = inject(Injector);
   private storeSelectionService = inject(StoreSelectionService);
   private storefrontPublication = inject(StorefrontPublicationService);
-  private companyService = inject(CompanyService);
 
   protected availableLocations = signal<Array<{
     id: string;
+    branchId?: string;
+    companyId: string;
     branchName: string;
     address: string;
     status: string;
@@ -95,20 +92,24 @@ export class BranchesComponent implements OnInit {
     storeId: string;
   }>>([]);
   protected isLoading = signal(false);
+  protected loadError = signal('');
   protected selectedBranchId = signal<string>('');
 
   ngOnInit() {
-    console.log('🌿 BranchesComponent: Initializing branches component');
-    runInInjectionContext(this.injector, () => {
-      this.loadData();
-    });
+    void this.loadData();
   }
 
   protected goBackToProducts() {
     this.router.navigate(['/']);
   }
 
-  protected selectBranch(location: { id: string; storeId: string; branchName: string }) {
+  protected selectBranch(location: {
+    id: string;
+    branchId?: string;
+    companyId: string;
+    storeId: string;
+    branchName: string;
+  }) {
     console.log('✅ BranchesComponent: Selected branch:', location);
     this.selectedBranchId.set(location.id);
     
@@ -117,12 +118,18 @@ export class BranchesComponent implements OnInit {
     
     // Open the public product storefront for the selected branch.
     setTimeout(() => {
-      this.router.navigate(['/store', location.storeId]);
+      this.router.navigate(['/store', location.storeId], {
+        queryParams: {
+          branchId: location.branchId || '',
+          companyId: location.companyId
+        }
+      });
     }, 300);
   }
 
   private async loadData() {
     this.isLoading.set(true);
+    this.loadError.set('');
 
     try {
       const companyIdOverride = this.route.snapshot.queryParamMap.get('companyId');
@@ -130,86 +137,37 @@ export class BranchesComponent implements OnInit {
         environment.companyId ||
         (await this.storefrontPublication.getCompanyBySlug(environment.companySlug))?.companyId ||
         '';
-      console.log('🌿 BranchesComponent: Loading branches for companyId:', companyId);
 
       if (!companyId) {
-        console.warn('🌿 BranchesComponent: No companyId available');
-        this.availableLocations.set([]);
-        this.isLoading.set(false);
-        return;
+        throw new Error('No companyId is available to load storefront branches.');
       }
 
-      try {
-        await this.companyService.refreshStorefrontBranches(companyId);
-      } catch (publicationError) {
-        console.warn('BranchesComponent: Could not refresh owner branch projections.', publicationError);
-      }
-      try {
-        await this.companyService.refreshStorefrontStores(companyId);
-      } catch (publicationError) {
-        console.warn('BranchesComponent: Could not refresh owner store projections.', publicationError);
-      }
-
-      const branchesRef = collection(this.firestore, 'storefront_branches');
-      const branchesQuery = query(
-        branchesRef,
-        where('companyId', '==', companyId),
-        where('status', '==', 'active')
-      );
-      const snapshot = await getDocs(branchesQuery);
-
-      const normalized: Array<{
-        id: string;
-        branchName: string;
-        address: string;
-        status: string;
-        storeHours: string;
-        storeId: string;
-      }> = snapshot.docs.map(docSnap => {
-        const data = docSnap.data() as PublicStorefrontBranch;
-        return {
-          id: docSnap.id,
-          branchName: data.name,
-          address: data.address,
-          status: data.status,
-          storeHours: data.storeHours,
-          storeId: data.storeId
-        };
-      });
-
-      if (normalized.length === 0) {
-        const storesRef = collection(this.firestore, 'storefront_stores');
-        const storesQuery = query(
-          storesRef,
-          where('companyId', '==', companyId),
-          where('status', '==', 'active')
-        );
-        const storeSnapshot = await getDocs(storesQuery);
-        normalized.push(...storeSnapshot.docs.map(docSnap => {
-          const data = docSnap.data() as PublicStorefrontStore;
-          return {
-            id: docSnap.id,
-            branchName: data.branchName || data.storeName,
-            address: data.address,
-            status: data.status,
-            storeHours: 'Hours not listed',
-            storeId: docSnap.id
-          };
-        }));
+      const locationsUrl = new URL(environment.api.storefrontLocationsApi);
+      locationsUrl.searchParams.set('companyId', companyId);
+      const response = await fetch(locationsUrl.toString());
+      const responseBody = await response.json() as {
+        locations?: Array<{
+          id: string;
+          branchId?: string;
+          companyId: string;
+          branchName: string;
+          address: string;
+          status: string;
+          storeHours: string;
+          storeId: string;
+        }>;
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(responseBody.error || 'The branch list could not be loaded.');
       }
 
-      console.log('🌿 BranchesComponent: Normalized locations:', {
-        count: normalized.length,
-        locations: normalized
-      });
-
-      this.availableLocations.set(normalized);
-      this.isLoading.set(false);
+      this.availableLocations.set(responseBody.locations || []);
     } catch (error) {
-      console.error('🌿 BranchesComponent: Error loading branches:', error);
-      this.availableLocations.set([]);
-      this.isLoading.set(false);
+      console.error('Could not load storefront branches.', error);
+      this.loadError.set(error instanceof Error ? error.message : 'Please try again.');
     }
+    this.isLoading.set(false);
   }
 
 }
